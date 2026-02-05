@@ -1,0 +1,67 @@
+# .gitignore - ESP-IDF Project (ESP32-C3)
+# Build artifacts, generated directories and temporary files
+
+## Build outputs
+/build/
+/sdkconfig
+/sdkconfig.old
+sdkconfig.*.orig
+
+## CMake & intermediate files
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
+project_description.json
+project_elf_src_*.c
+
+## Binaries & object files
+*.elf
+*.bin
+*.map
+*.hex
+*.img
+*.ota
+*.o
+*.a
+*.d
+
+## Generated flasher args
+flasher_args.json
+flash*args*
+
+## Toolchain
+/toolchain/
+
+## IDEs & Editors
+.vscode/
+.idea/
+*.iml
+*.code-workspace
+.sublime-workspace
+.sublime-project
+
+## Editor & OS temporals
+*~
+*.swp
+*.swo
+*.bak
+.DS_Store
+Thumbs.db
+
+## Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.python-version
+.mypy_cache/
+.pytest_cache/
+Pipfile.lock
+poetry.lock
+
+## Logs
+*.log
+*.trace
+
+# Keep source files (example) but ignore build products under 'build/'.

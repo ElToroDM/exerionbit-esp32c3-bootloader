@@ -1,0 +1,4 @@
+WARNING: The IDF_PYTHON_ENV_PATH is missing in environmental variables!
+ESP-IDF v6.1-dev-2309-g7d7f533357
+"cmake" must be available on the PATH to use idf.py
+Executing action: all (aliases: build)
