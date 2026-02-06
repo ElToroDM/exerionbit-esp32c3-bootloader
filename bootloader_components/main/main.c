@@ -18,45 +18,11 @@
 #include "soc/gpio_reg.h"
 #include "ws2812.h"
 
-/* ============================================================================
- * Configuration Constants
- * ============================================================================ */
 #define BOOTLOG_BUFFER_SIZE       2048
 
-/* ============================================================================
- * Bootloader State Variables
- * ============================================================================ */
 static char bootlog_buf[BOOTLOG_BUFFER_SIZE];
 static size_t bootlog_index = 0;
 
-/* ============================================================================
- * Timer Utilities (RISC-V mcycle counter)
- * ============================================================================ */
-
-/**
- * Read 64-bit mcycle counter (RISC-V specific).
- * Uses atomic read pattern to handle 32-bit CPU reading 64-bit counter.
- */
-static inline uint64_t read_mcycle64(void)
-{
-    uint32_t hi, lo, hi2;
-    do {
-        asm volatile ("rdcycleh %0" : "=r" (hi));
-        asm volatile ("rdcycle %0" : "=r" (lo));
-        asm volatile ("rdcycleh %0" : "=r" (hi2));
-    } while (hi != hi2);
-    return (((uint64_t)hi) << 32) | lo;
-}
-
-/**
- * Get boot time in microseconds from mcycle counter.
- * CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ: CPU frequency in MHz
- */
-static inline uint64_t boot_time_us(void)
-{
-    uint64_t cycles = read_mcycle64();
-    return cycles / CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ;
-}
 
 /* ============================================================================
  * Bootloader Logging Functions
@@ -138,12 +104,22 @@ static void bootlog_print(const char* msg)
  */
 void __attribute__((noreturn)) call_start_cpu0(void)
 {
+    // ets_delay_us(3000000);
+
     // ========================================================================
     // Phase 1: Buffer initial logs (USB may not be connected yet)
     // ========================================================================
     bootlog_buffer("call_start_cpu0 entered");
     bootlog_buffer("Initializing bootloader...");
+
     
+
+    bootlog_print("Initializing WS2812 LED on GPIO10...");
+    ws2812_init(WS2812_DEFAULT_GPIO);
+    bootlog_print("LED: RED");
+    ws2812_set_rgb(255, 0, 0);
+    bootlog_print("WS2812 initialized");
+
     // ========================================================================
     // Phase 2: Hardware initialization
     // ========================================================================
@@ -191,36 +167,21 @@ void __attribute__((noreturn)) call_start_cpu0(void)
     // ========================================================================
     // Phase 6.1: LED color sequence (WS2812)
     // ========================================================================
-    bootlog_print("Initializing WS2812 LED on GPIO10...");
-    ws2812_init(WS2812_DEFAULT_GPIO);
-    bootlog_print("WS2812 initialized");
     
-    // Test GPIO control - set HIGH for visual test
-    bootlog_print("Testing GPIO HIGH...");
-    REG_WRITE(GPIO_OUT_W1TS_REG, (1U << WS2812_DEFAULT_GPIO));
-    ets_delay_us(500000);  // 500ms
-    REG_WRITE(GPIO_OUT_W1TC_REG, (1U << WS2812_DEFAULT_GPIO));
-    ets_delay_us(500000);  // 500ms
-    
+
     bootlog_print("Starting color sequence...");
-    ws2812_set_rgb(0, 0, 0);     // clear
-    ets_delay_us(100000);
-    
-    bootlog_print("LED: RED");
-    ws2812_set_rgb(255, 0, 0);
-    ets_delay_us(1000000);
+   
     
     bootlog_print("LED: YELLOW");
-    ws2812_set_rgb(255, 255, 0);
+    ws2812_set_rgb(12, 12, 0);
     ets_delay_us(1000000);
     
     bootlog_print("LED: GREEN");
-    ws2812_set_rgb(0, 255, 0);
+    ws2812_set_rgb(0, 12, 0);
     ets_delay_us(1000000);
     
     bootlog_print("LED: OFF");
-    ws2812_set_rgb(0, 0, 0);
-    ets_delay_us(500000);
+    // ws2812_set_rgb(0, 0, 0);
     
     // ========================================================================
     // Phase 7: Load and execute application
