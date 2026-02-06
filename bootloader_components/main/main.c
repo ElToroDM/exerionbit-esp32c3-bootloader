@@ -1,13 +1,10 @@
 // Custom bootloader component for ESP32-C3 Waveshare Zero
  
-#include <string.h>
-#include <stdint.h>
 #include "sdkconfig.h"
 #include "bootloader_init.h"
 #include "bootloader_utility.h"
 #include "bootloader_common.h"
 #include "rom/ets_sys.h"
-#include "soc/gpio_reg.h"
 #include "ws2812.h"
 #include "logging.h"
 

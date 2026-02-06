@@ -1,25 +1,23 @@
-// Bootloader logging implementation
-#include <string.h>
+// Bootloader logging with buffering
 #include "rom/ets_sys.h"
 #include "logging.h"
 
-#define BOOTLOG_BUFFER_SIZE 2048
+#define BOOTLOG_BUFFER_SIZE 1024
 
 static char bootlog_buf[BOOTLOG_BUFFER_SIZE];
-static size_t bootlog_index = 0;
+static uint16_t bootlog_index = 0;
 
-void bootlog_append(const char* msg)
+void bootlog_buffer(const char* msg)
 {
-    if (!msg) return;
+    if (!msg || bootlog_index >= BOOTLOG_BUFFER_SIZE - 2) return;
     
-    size_t len = strlen(msg);
-    if (bootlog_index + len + 1 >= BOOTLOG_BUFFER_SIZE) {
-        return;  // Buffer full, drop message
+    const char* src = msg;
+    while (*src && bootlog_index < BOOTLOG_BUFFER_SIZE - 1) {
+        bootlog_buf[bootlog_index++] = *src++;
     }
-    
-    strcpy(&bootlog_buf[bootlog_index], msg);
-    bootlog_index += len;
-    bootlog_buf[bootlog_index++] = '\n';
+    if (bootlog_index < BOOTLOG_BUFFER_SIZE - 1) {
+        bootlog_buf[bootlog_index++] = '\n';
+    }
 }
 
 void bootlog_flush(void)
@@ -29,13 +27,8 @@ void bootlog_flush(void)
         ets_printf("=== BOOTLOADER LOG BUFFER START ===\n");
         ets_printf("%s", bootlog_buf);
         ets_printf("=== BOOTLOADER LOG BUFFER END ===\n");
+        bootlog_index = 0;  // Reset buffer after flush
     }
-}
-
-void bootlog_buffer(const char* msg)
-{
-    // reuse existing append logic (adds newline)
-    bootlog_append(msg);
 }
 
 void bootlog_print(const char* msg)
