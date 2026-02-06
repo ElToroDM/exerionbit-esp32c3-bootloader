@@ -1,5 +1,5 @@
 # Custom bootloader main component that replaces the default ESP-IDF bootloader
-idf_component_register(SRCS "main.c"
+idf_component_register(SRCS "ws2812.c" "main.c"
                        INCLUDE_DIRS "."
                        REQUIRES bootloader_support log spi_flash)
 

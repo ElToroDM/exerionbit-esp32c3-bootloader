@@ -15,6 +15,8 @@
 #include "bootloader_utility.h"
 #include "bootloader_common.h"
 #include "rom/ets_sys.h"
+#include "soc/gpio_reg.h"
+#include "ws2812.h"
 
 /* ============================================================================
  * Configuration Constants
@@ -186,6 +188,40 @@ void __attribute__((noreturn)) call_start_cpu0(void)
     // ========================================================================
     bootlog_flush();
 
+    // ========================================================================
+    // Phase 6.1: LED color sequence (WS2812)
+    // ========================================================================
+    bootlog_print("Initializing WS2812 LED on GPIO10...");
+    ws2812_init(WS2812_DEFAULT_GPIO);
+    bootlog_print("WS2812 initialized");
+    
+    // Test GPIO control - set HIGH for visual test
+    bootlog_print("Testing GPIO HIGH...");
+    REG_WRITE(GPIO_OUT_W1TS_REG, (1U << WS2812_DEFAULT_GPIO));
+    ets_delay_us(500000);  // 500ms
+    REG_WRITE(GPIO_OUT_W1TC_REG, (1U << WS2812_DEFAULT_GPIO));
+    ets_delay_us(500000);  // 500ms
+    
+    bootlog_print("Starting color sequence...");
+    ws2812_set_rgb(0, 0, 0);     // clear
+    ets_delay_us(100000);
+    
+    bootlog_print("LED: RED");
+    ws2812_set_rgb(255, 0, 0);
+    ets_delay_us(1000000);
+    
+    bootlog_print("LED: YELLOW");
+    ws2812_set_rgb(255, 255, 0);
+    ets_delay_us(1000000);
+    
+    bootlog_print("LED: GREEN");
+    ws2812_set_rgb(0, 255, 0);
+    ets_delay_us(1000000);
+    
+    bootlog_print("LED: OFF");
+    ws2812_set_rgb(0, 0, 0);
+    ets_delay_us(500000);
+    
     // ========================================================================
     // Phase 7: Load and execute application
     // ========================================================================

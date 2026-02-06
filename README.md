@@ -146,12 +146,6 @@ I (54) boot: Disabling RNG early entropy source...
 2. 🔄 **RESET pressed** → **USB disconnects immediately** 
 3. 🔄 **ROM bootloader runs** → (USB disconnected - output invisible)
 4. ✅ **Our custom bootloader executes** → (USB disconnected - output invisible)
-   ```c
-   ESP_LOGI("custom_boot", "call_start_cpu0 entered");           // ← RUNS (but USB off)
-   ESP_LOGI("custom_boot", "Custom ESP32-C3 Bootloader v1.0");  // ← RUNS (but USB off) 
-   ESP_LOGI("custom_boot", "Loading partition table...");       // ← RUNS (but USB off)
-   bootloader_utility_load_boot_image(&bs, 0);                  // ← RUNS (but USB off)
-   ```
 5. ✅ **Application starts** → (USB disconnected - output invisible)
 6. 🔄 **Application reinitializes USB CDC** → USB reconnects
 7. 🔌 **Monitor reconnects** → but boot sequence already completed
