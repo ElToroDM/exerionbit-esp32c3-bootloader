@@ -16,93 +16,14 @@ To flash the board:
 3. Release **BOOT** button
 4. Run flash command
 
-## Build & Flash Workflow (recommended)
+## Quick Start
 
-> Use ESP-IDF v6.1 (configure the ESP-IDF Extension to point to `C:\esp\esp-idf` and set `IDF_TOOLS_PATH` to `C:\Users\Admin\.espressif`).
-
-### ⭐ Recommended: Use VS Code ESP-IDF Extension
-The easiest way to build, flash, and monitor is using the ESP-IDF Extension buttons in VS Code:
-1. Click the **ESP-IDF** icon in the sidebar
-2. Use the **Build** button (or `Ctrl+E` `B`)
-3. Use the **Flash** button (or `Ctrl+E` `F`)
-4. Use the **Monitor** button (or `Ctrl+E` `M`)
-
-This automatically handles all environment setup and toolchain configuration.
-
-### Alternative: Manual PowerShell commands
-If you prefer to use PowerShell directly, create an alias for convenience:
-
-```powershell
-# Add to your PowerShell profile for permanent use
-function idf { & C:\Users\Admin\.espressif\python_env\idf6.1_py3.11_env\Scripts\python.exe C:\esp\esp-idf\tools\idf.py $args }
-$env:IDF_PATH = "C:\esp\esp-idf"
-
-# Then use it like:
-idf build
-idf -p COM4 flash
-idf -p COM4 monitor
-```
-
-Or use the full command each time:
-```powershell
-# Set IDF_PATH first
-$env:IDF_PATH = "C:\esp\esp-idf"
-
-# Build
-C:\Users\Admin\.espressif\python_env\idf6.1_py3.11_env\Scripts\python.exe C:\esp\esp-idf\tools\idf.py build
-
-# Flash
-C:\Users\Admin\.espressif\python_env\idf6.1_py3.11_env\Scripts\python.exe C:\esp\esp-idf\tools\idf.py -p COM4 flash
-
-# Monitor
-C:\Users\Admin\.espressif\python_env\idf6.1_py3.11_env\Scripts\python.exe C:\esp\esp-idf\tools\idf.py -p COM4 monitor
-```
-
-### Common commands
-```powershell
-# Fast iteration (app only - faster than full flash)
-idf -p COM4 app-flash
-
-# Bootloader only
-idf -p COM4 bootloader-flash
-
-# Backup full flash to a file
-python -m esptool --chip esp32c3 --port COM4 read_flash 0x0 0x400000 backup.bin
-
-# Erase flash completely
-idf -p COM4 erase-flash
-```
-
-### Notes about monitoring & capturing the full boot
-- **Recommended:** Use the ESP-IDF Extension's "Monitor" button or `idf.py -p COM4 monitor` for normal development. This provides:
-  - Automatic symbol decoding
-  - Panic backtrace decoding
-  - Colored output
-  - Interactive menu (`Ctrl+T` for help)
-  
-- **ESP32-C3 USB behavior:** The USB CDC interface disconnects during reset, which can cause the monitor to miss very early ROM/bootloader messages while USB re-enumerates. You'll see:
-  ```
-  --- Error: ClearCommError failed (PermissionError...)
-  --- Waiting for the device to reconnect
-  ```
-  This is **normal ESP32-C3 behavior**, not an error. The monitor automatically reconnects.
-
-- **Bootloader timing:** The custom bootloader now waits **0.5 seconds** (`ets_delay_us(500000)`) before flushing buffered logs. This gives the USB interface time to reconnect after reset. The buffered logs then print all at once:
-  ```
-  === BOOTLOADER LOG BUFFER START ===
-  [#0001] bootloader_init succeeded
-  [#0002] ===============================
-  [#0003] Custom ESP32-C3 Bootloader v1.0
-  ...
-  === BOOTLOADER LOG BUFFER END ===
-  ```
-
-- **To capture absolutely everything:** Use the included serial watcher which handles USB reconnection and logs to a file:
-  ```powershell
-  python scripts/watch_serial.py --port COM4 --inactivity 10
-  ```
-
-- **addr2line warnings:** If you see "The system cannot find the file specified" errors related to `riscv32-esp-elf-addr2line`, the RISC-V toolchain is not in PATH. This is cosmetic—the monitor still works. To fix, run the ESP-IDF `export.ps1` script first.
+1. Install ESP‑IDF v6.1 and the VS Code ESP‑IDF extension (recommended).
+2. Open this folder in VS Code and point the extension to `C:\esp\esp-idf`.
+3. Use the ESP‑IDF extension: Build → Flash → Monitor.
+4. Or in PowerShell (example): `set IDF_PATH=C:\esp\esp-idf ; idf.py -p COM4 flash monitor`
+5. To capture full boot logs (ESP32‑C3 USB re‑enumerates): `python scripts/watch_serial.py --port COM4`
+6. See `SETUP.md` for environment setup, toolchain PATH, PowerShell alias, and troubleshooting.
 
 ---
 
