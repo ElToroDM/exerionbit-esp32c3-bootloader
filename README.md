@@ -124,6 +124,8 @@ Notes:
 
 This repository is moving to a hardware-in-the-loop validation flow aligned with the studio audit contract.
 
+**Boot sequence specification**: See [BOOT_SEQUENCE.md](BOOT_SEQUENCE.md) for complete LED mapping, timing budget, and serial token definitions.
+
 Locked validation defaults:
 - Serial port auto-detection enabled by default
 - Total validation timeout: `10s`

@@ -37,7 +37,7 @@ This document collects environment, installation, monitoring, and troubleshootin
 ## Monitor tips & capturing the full boot
 - `idf.py -p COM4 monitor` is convenient and provides symbol/panic decoding.
 - ESP32‑C3 USB CDC disconnects during reset → very early boot messages may be missed while USB re‑enumerates.
-- Bootloader uses a 0.5s delay to allow USB to reconnect (see bootloader log buffer).
+- Bootloader uses a 1.0s reconnect window to allow USB to re-enumerate reliably in demos (see bootloader log buffer).
 
 ### Use the included serial watcher (recommended to capture everything)
 - Dependency: `pyserial`
@@ -62,7 +62,7 @@ This document collects environment, installation, monitoring, and troubleshootin
 - Fix: run ESP‑IDF `export.ps1` (or use the IDF Extension shell) so the toolchain binaries are available. This is cosmetic — serial monitor still prints logs.
 
 ## Advanced notes (boot timing and debug strategies)
-- Boot delay: bootloader flushes buffered logs after ~0.5s to allow USB re‑enumeration; this is intentional to ensure logs appear after USB reconnects.
+- Boot delay: bootloader flushes buffered logs after ~1.0s to allow USB re‑enumeration; this is intentional to ensure logs appear after USB reconnects in demo mode.
 - To capture boot earlier:
   - Use external UART on GPIO20/21
   - Use JTAG (ESP‑PROG + OpenOCD)
