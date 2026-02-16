@@ -120,6 +120,21 @@ Notes:
 - `idf.py monitor` is still useful for its GDB/panic-decoding features, but those initial `idf.py` header lines are printed by the host and will not be numbered by the serial monitor script. Use the script for complete, robust serial capture and numbering.
 - If you prefer the `idf.py monitor` UX and still want every line prefixed, we can add a wrapper that prefixes `idf.py monitor` stdout as well (more invasive; I can implement if required).
 
+## Validation profile (marketing + audit)
+
+This repository is moving to a hardware-in-the-loop validation flow aligned with the studio audit contract.
+
+Locked validation defaults:
+- Serial port auto-detection enabled by default
+- Total validation timeout: `10s`
+- Manual port override remains available
+- Missing LED media evidence does not fail engineering protocol validation
+
+Evidence policy:
+- Protocol PASS/FAIL is based on deterministic boot/app token checks.
+- LED GIF, screenshots, and short video are still required for full marketing packaging.
+- If LED media is missing, release status is marketing-incomplete (not protocol-failed).
+
 ## Project Structure
 ```
 waveshare_esp32c3_zero_bootloader/
