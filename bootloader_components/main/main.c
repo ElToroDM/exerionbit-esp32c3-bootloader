@@ -10,6 +10,7 @@
 #include "esp_rom_gpio.h"
 #include "rom/ets_sys.h"
 #include "soc/gpio_reg.h"
+#include "soc/rtc_cntl_reg.h"
 #include "ws2812.h"
 
 #define TOTAL_VISUAL_MS            4000U
@@ -26,6 +27,14 @@
 #define FATAL_BLINK_PERIOD_MS      333U
 #define FATAL_BLINK_ON_MS          (FATAL_BLINK_PERIOD_MS / 2U)
 #define FATAL_BLINK_OFF_MS         (FATAL_BLINK_PERIOD_MS - FATAL_BLINK_ON_MS)
+
+#define BOOT_CTX_MAGIC             0x424C4358U
+#define BOOT_CTX_UNKNOWN           0U
+#define BOOT_CTX_NORMAL            1U
+#define BOOT_CTX_RECOVERY          2U
+#define BOOT_CTX_UPDATE            3U
+#define BOOT_CTX_MAGIC_REG         RTC_CNTL_STORE6_REG
+#define BOOT_CTX_VALUE_REG         RTC_CNTL_STORE7_REG
 
 typedef struct {
     uint8_t r;
@@ -68,6 +77,12 @@ static void emit_evt_with_value(const char *token, uint32_t value)
     ets_printf("BL_EVT:%s:%u\n", token, value);
 }
 
+static void publish_boot_context(uint32_t context)
+{
+    REG_WRITE(BOOT_CTX_MAGIC_REG, BOOT_CTX_MAGIC);
+    REG_WRITE(BOOT_CTX_VALUE_REG, context);
+}
+
 static void set_led(led_rgb_t color)
 {
     ws2812_set_rgb(color.r, color.g, color.b);
@@ -77,6 +92,7 @@ static void configure_input_gpio(int gpio)
 {
     esp_rom_gpio_pad_select_gpio(gpio);
     REG_WRITE(GPIO_ENABLE_W1TC_REG, (1U << gpio));
+    esp_rom_gpio_pad_pullup_only(gpio);
 }
 
 static bool gpio_level_low(int gpio)
@@ -162,6 +178,8 @@ static void run_update_check_visual(void)
 // Main Bootloader Entry Point
 void __attribute__((noreturn)) call_start_cpu0(void)
 {
+    publish_boot_context(BOOT_CTX_UNKNOWN);
+
     configure_input_gpio(RECOVERY_TRIGGER_GPIO);
     configure_input_gpio(UPDATE_TRIGGER_GPIO);
     configure_input_gpio(CRC_FAIL_TRIGGER_GPIO);
@@ -193,6 +211,7 @@ void __attribute__((noreturn)) call_start_cpu0(void)
     delay_ms(USB_RECONNECT_MS);
 
     if (evaluate_recovery_trigger()) {
+        publish_boot_context(BOOT_CTX_RECOVERY);
         enter_recovery_loop();
     }
 
@@ -202,7 +221,9 @@ void __attribute__((noreturn)) call_start_cpu0(void)
 
     run_update_check_visual();
 
-    if (evaluate_update_candidate()) {
+    bool update_candidate = evaluate_update_candidate();
+
+    if (update_candidate) {
         uint32_t observed_crc = calculate_partition_descriptor_crc(&boot_state);
         uint32_t expected_crc = observed_crc;
 
@@ -231,6 +252,12 @@ void __attribute__((noreturn)) call_start_cpu0(void)
     delay_ms(phase_duration_ms(s_normal_phases[5].visual_percent));
 
     set_led((led_rgb_t){0, 0, 0});
+
+    if (update_candidate) {
+        publish_boot_context(BOOT_CTX_UPDATE);
+    } else {
+        publish_boot_context(BOOT_CTX_NORMAL);
+    }
 
     emit_evt("HANDOFF_APP");
     bootloader_utility_load_boot_image(&boot_state, 0);

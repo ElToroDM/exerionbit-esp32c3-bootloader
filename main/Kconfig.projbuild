@@ -1,0 +1,18 @@
+menu "Test app options"
+
+config APP_ENABLE_FAULT_HOOK
+    bool "Enable test app fault simulation hook"
+    default n
+    help
+        Enables a controlled reboot simulation hook in the test app.
+        Keep disabled for public release builds.
+
+config APP_FAULT_HOOK_GPIO
+    int "Fault hook trigger GPIO"
+    depends on APP_ENABLE_FAULT_HOOK
+    range 0 21
+    default 10
+    help
+        Pull this GPIO low to trigger APP_EVT:FAULT_HOOK:TRIGGERED:RESTART.
+
+endmenu
