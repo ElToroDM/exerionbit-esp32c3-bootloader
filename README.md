@@ -130,12 +130,9 @@ Locked validation defaults:
 - Serial port auto-detection enabled by default
 - Total validation timeout: `10s`
 - Manual port override remains available
-- Missing LED media evidence does not fail engineering protocol validation
 
 Evidence policy:
 - Protocol PASS/FAIL is based on deterministic boot/app token checks.
-- LED GIF, screenshots, and short video are still required for full marketing packaging.
-- If LED media is missing, release status is marketing-incomplete (not protocol-failed).
 
 ## Project Structure
 ```
