@@ -90,3 +90,5 @@ For the hardware-in-the-loop validator profile used in this project:
 Note:
 - Protocol validation is token/log driven.
 - LED/video/screenshot assets remain required for complete marketing evidence packaging.
+
+Security note: This public repo provides a compliance-ready baseline only; production key management, image signing, and advanced hardening are intentionally omitted and are handled only in private client engagements.

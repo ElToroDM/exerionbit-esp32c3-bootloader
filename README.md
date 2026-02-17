@@ -120,9 +120,9 @@ Notes:
 - `idf.py monitor` is still useful for its GDB/panic-decoding features, but those initial `idf.py` header lines are printed by the host and will not be numbered by the serial monitor script. Use the script for complete, robust serial capture and numbering.
 - If you prefer the `idf.py monitor` UX and still want every line prefixed, we can add a wrapper that prefixes `idf.py monitor` stdout as well (more invasive; I can implement if required).
 
-## Validation profile (marketing + audit)
+## Validation profile
 
-This repository is moving to a hardware-in-the-loop validation flow aligned with the studio audit contract.
+This repository provides a minimal bootloader demo and instructions for building and flashing on the Waveshare ESP32-C3 Zero.
 
 **Boot sequence specification**: See [BOOT_SEQUENCE.md](BOOT_SEQUENCE.md) for complete LED mapping, timing budget, and serial token definitions.
 

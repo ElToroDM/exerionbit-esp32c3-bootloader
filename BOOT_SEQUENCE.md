@@ -66,6 +66,7 @@ Boot decisions are deterministic and based on explicit GPIO inputs:
 - Update candidate trigger: `GPIO8` held low (stable sampled)
 - Forced CRC mismatch trigger (test path): `GPIO7` held low (stable sampled)
 
+
 Input sampling uses repeated low-level reads with fixed delay to avoid transient decisions.
 
 ## 5. Recovery behavior
