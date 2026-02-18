@@ -25,6 +25,7 @@ jobs:
           idf.py build
 
       - name: Run idf_size and capture report
+        shell: bash
         run: |
           set -euo pipefail
           # Ensure ESP-IDF environment is loaded so idf_size.py is available
