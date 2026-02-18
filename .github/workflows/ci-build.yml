@@ -20,11 +20,15 @@ jobs:
 
       - name: Build project
         run: |
+          # Source ESP-IDF environment inside the container so `idf.py` is available
+          . /opt/esp/idf/export.sh || true
           idf.py build
 
       - name: Run idf_size and capture report
         run: |
           set -euo pipefail
+          # Ensure ESP-IDF environment is loaded so idf_size.py is available
+          . /opt/esp/idf/export.sh || true
           ELF=$(ls build/*.elf | head -n1) || true
           if [ -z "${ELF:-}" ]; then echo "No ELF found in build/"; exit 1; fi
           MAP="${ELF%.elf}.map"
