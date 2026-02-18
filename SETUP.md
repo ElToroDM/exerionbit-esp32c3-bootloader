@@ -39,6 +39,27 @@ This document collects environment, installation, monitoring, and troubleshootin
 - ESP32‑C3 USB CDC disconnects during reset → very early boot messages may be missed while USB re‑enumerates.
 - Bootloader uses a 1.0s reconnect window to allow USB to re-enumerate reliably in demos (see bootloader log buffer).
 
+### Continuous Integration (CI)
+- This repo includes a GitHub Actions workflow (`.github/workflows/ci-build.yml`) that:
+  - Builds the bootloader in an ESP‑IDF container
+  - Runs `idf_size.py` (informational)
+  - Uploads `size-report` and `binaries` artifacts for each run
+- Manual run: open the workflow in GitHub Actions and click **Run workflow** (workflow_dispatch) or use `gh workflow run`.
+- Download artifacts: GitHub UI (Actions → run → Artifacts) or `gh run download <run-id> --name binaries`.
+- CI policy: size report is informational only; there is no enforced size baseline in CI (can be added later).
+
+### Branches & PR housekeeping
+- Recommended flow: `feature/<name>` → open PR → CI + review → **Squash and merge** → delete branch.
+- To auto‑clean after merge: enable **Automatically delete head branches** in the repository settings.
+- Quick local cleanup:
+  ```bash
+  git fetch --prune
+  git checkout main
+  git pull origin main
+  git branch -d feature/your-branch
+  ```
+
+
 ### Use the included serial watcher (recommended to capture everything)
 - Dependency: `pyserial`
 - Example:

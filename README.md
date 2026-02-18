@@ -1,5 +1,7 @@
 # Waveshare ESP32-C3 Zero Custom Bootloader
 
+[![CI](https://github.com/ElToroDM/exerionbit-esp32c3-bootloader/actions/workflows/ci-build.yml/badge.svg?branch=main)](https://github.com/ElToroDM/exerionbit-esp32c3-bootloader/actions/workflows/ci-build.yml)
+
 Minimal ESP-IDF bootloader for the Waveshare ESP32-C3 Zero board.
 
 ## Hardware
@@ -23,7 +25,8 @@ To flash the board:
 3. Use the ESP‑IDF extension: Build → Flash → Monitor.
 4. Or in PowerShell (example): `set IDF_PATH=C:\esp\esp-idf ; idf.py -p COM4 flash monitor`
 5. To capture full boot logs (ESP32‑C3 USB re‑enumerates): `python scripts/watch_serial.py --port COM4`
-6. See `SETUP.md` for environment setup, toolchain PATH, PowerShell alias, and troubleshooting.
+6. CI: this repository includes a GitHub Actions workflow that builds the bootloader and uploads artifacts (`size-report` + `binaries`). See the **Continuous Integration** section below and `SETUP.md` for details.
+7. See `SETUP.md` for environment setup, toolchain PATH, PowerShell alias, and troubleshooting.
 
 ---
 
@@ -103,6 +106,23 @@ $env:IDF_PATH = "C:\esp\esp-idf"
 C:\Users\Admin\.espressif\python_env\idf6.1_py3.11_env\Scripts\python.exe scripts/watch_serial.py --port COM4 --inactivity 10
 ```
 
+The watcher was improved in this branch to handle transient USB disconnects cleanly and to detect stalls/inactivity. It prefixes each line with a timestamp and line counter and writes `build/bootlog.txt` for deterministic validation and offline analysis.
+
+---
+
+## Continuous Integration (GitHub Actions)
+
+- What it does: builds the project in an official ESP‑IDF container, runs `idf_size.py` (informational) and uploads two artifacts on every run:
+  - `size-report` — memory/section usage (informational)
+  - `binaries` — compiled `*.bin` and `*.elf` (ready for flashing)
+
+- Where to find artifacts: GitHub → Actions → select run → **Artifacts** → download `binaries` or `size-report`.
+
+- Manual runs: the workflow exposes `workflow_dispatch` so you can run the CI from the Actions UI for a given branch.
+
+- Note: `idf_size` is informational only in CI (no automatic size regression check by default).
+
+Refer to `SETUP.md` for more CI / artifact commands and troubleshooting.
 - What the script does:
   - Reconnects automatically after USB re-enumeration ✅
   - Logs to `build/bootlog.txt` ✅
