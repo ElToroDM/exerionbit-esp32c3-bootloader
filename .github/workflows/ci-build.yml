@@ -5,22 +5,18 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build:
     name: Build (ESP32-C3) and size check
     runs-on: ubuntu-latest
     container:
-      image: espressif/idf:latest
+      image: espressif/idf:release-v6.0
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Ensure Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
 
       - name: Install pip upgrades
         run: |
