@@ -11,7 +11,7 @@ jobs:
     name: Build (ESP32-C3) and size check
     runs-on: ubuntu-latest
     container:
-      image: espressif/idf:release-v6.1
+      image: espressif/idf:latest
 
     steps:
       - name: Checkout repository
