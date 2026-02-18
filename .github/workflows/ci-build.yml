@@ -1,0 +1,49 @@
+name: CI — build & size check
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build (ESP32-C3) and size check
+    runs-on: ubuntu-latest
+    container:
+      image: espressif/idf:release-v6.0
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build project
+        run: |
+          # Source ESP-IDF environment inside the container so `idf.py` is available
+          . /opt/esp/idf/export.sh || true
+          idf.py build
+
+      - name: Run idf_size and capture report
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Ensure ESP-IDF environment is loaded so idf_size.py is available
+          . /opt/esp/idf/export.sh || true
+          ELF=$(ls build/*.elf | head -n1) || true
+          if [ -z "${ELF:-}" ]; then echo "No ELF found in build/"; exit 1; fi
+          MAP="${ELF%.elf}.map"
+          echo "ELF=${ELF}"
+          echo "MAP=${MAP}"
+          idf_size.py "${MAP}" | tee build/size-report.txt
+          # extract numeric total size (expects line like 'Total image size: 133900 bytes')
+          SIZE=$(grep -oP 'Total image size:\s*\K[0-9]+' build/size-report.txt || echo 0)
+          echo "IMAGE_SIZE=${SIZE}" >> $GITHUB_ENV
+          echo "Image size reported: ${SIZE} bytes"
+
+      # Size regression check intentionally removed — keep size report for visibility only.
+      - name: Upload size report
+        uses: actions/upload-artifact@v4
+        with:
+          name: size-report
+          path: build/size-report.txt
