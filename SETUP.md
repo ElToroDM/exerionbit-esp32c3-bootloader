@@ -47,7 +47,7 @@ This document collects environment, installation, monitoring, and troubleshootin
   C:\Users\<User>\.espressif\python_env\idf6.1_py3.11_env\Scripts\python.exe scripts/watch_serial.py --port COM4 --inactivity 10
   ```
 - What it does:
-  - Reconnects after USB re‑enumeration
+  - Reconnects after USB re‑enumeration (useful when the device is reset)
   - Adds monotonic line numbers and timestamps
   - Logs to `build/bootlog.txt`
 - CLI flags:
@@ -56,6 +56,14 @@ This document collects environment, installation, monitoring, and troubleshootin
   - `--inactivity` seconds (default `3.0`)
   - `--same-time` stall detection (default `3.0`)
   - `--log` (default `build/bootlog.txt`)
+
+#### Smoke test — verify HEARTBEAT
+- Run the watcher, press the device reset button, wait for the watcher to show `Connected to COM4` and then check the log for `APP_EVT:HEARTBEAT`.
+- PowerShell quick check:
+  ```powershell
+  Select-String -Path .\build\bootlog.txt -Pattern 'APP_EVT:HEARTBEAT'
+  ```
+- Note: a transient message such as `Serial read error: ClearCommError` during a manual reset is expected — the watcher will reconnect automatically and continue logging.
 
 ## Toolchain / addr2line note
 - If monitor prints errors about `riscv32-esp-elf-addr2line` missing: the RISC‑V cross‑toolchain is not on PATH.

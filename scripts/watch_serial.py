@@ -87,11 +87,18 @@ while True:
             pass
         break
     except Exception as e:
-        print(f"Serial read error: {e}")
+        # Handle transient disconnects (USB re-enumeration on reset) more gracefully.
+        # Common symptom on Windows: ClearCommError / PermissionError during reset.
+        err_str = str(e)
+        if isinstance(e, PermissionError) or 'ClearCommError' in err_str or isinstance(e, serial.SerialException):
+            print(f"[INFO] Port {port} disconnected/reset (transient). Waiting to reconnect...")
+        else:
+            print(f"Serial read error: {e}")
         try:
             ser.close()
         except:
             pass
         ser = None
+        # small backoff to allow OS re-enumeration
         time.sleep(1)
         continue
