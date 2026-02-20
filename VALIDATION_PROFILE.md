@@ -50,6 +50,12 @@ Required:
 - `docs/evidence/<release>/expected-vs-observed.md`
 - `docs/evidence/<release>/logs/*.log`
 
+When live serial logs are unavailable (hardware window closed), the release record must:
+
+- include build artifact metadata in `expected-vs-observed.md`
+- mark the run status as `PARTIAL`
+- schedule a follow-up capture to add `logs/*.log`
+
 Optional but recommended for public packaging:
 
 - `docs/evidence/<release>/screenshots/*`
