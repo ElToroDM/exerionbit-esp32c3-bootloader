@@ -7,6 +7,35 @@
 
 Minimal ESP-IDF bootloader for the Waveshare ESP32-C3 Zero board.
 
+## What this repository proves
+
+- Deterministic ESP32-C3 second-stage boot behavior on real hardware baseline
+- Explicit boot decision states with stable serial tokens and LED mapping
+- Reproducible normal/recovery/update baseline suitable for audit-style review
+
+## What this repository does not prove
+
+- Advanced production hardening internals
+- Full key management architecture
+- Client-specific anti-tamper implementation details
+
+## Quick demo
+
+1. Build and flash using ESP-IDF.
+2. Capture logs with `scripts/watch_serial.py`.
+3. Validate token sequence with the validation profile (`VALIDATION_PROFILE.md`).
+
+## Known limits
+
+- Live validation requires physical ESP32-C3 hardware access
+- Native USB re-enumeration can hide very early boot lines without watcher tooling
+- Public repository documents baseline behavior, not full production hardening
+
+## Contact
+
+- Open an issue for scoped bootloader adaptation work
+- See `BOOT_SEQUENCE.md` and `VALIDATION_PROFILE.md` for the canonical contract
+
 ## Hardware
 - **Board**: Waveshare ESP32-C3 Zero
 - **SoC**: ESP32-C3FH4 (RISC-V, 160MHz)

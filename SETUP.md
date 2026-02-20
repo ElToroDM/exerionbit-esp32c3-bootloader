@@ -2,6 +2,16 @@
 
 This document collects environment, installation, monitoring, and troubleshooting details required to build, flash, and capture full boot logs for the Waveshare ESP32‑C3 Zero bootloader.
 
+## Contract documents
+
+- Boot sequence contract: `BOOT_SEQUENCE.md`
+- Validation execution profile: `VALIDATION_PROFILE.md`
+
+## Validation entry point
+
+- Live capture: `python scripts/watch_serial.py --port COM4 --inactivity 10`
+- Offline/token validation: `python scripts/validate_bootlog.py --log build/bootlog.txt`
+
 ## Required software
 - ESP‑IDF: **v6.1** (tested)
 - Python 3.11 (use ESP‑IDF Python virtual env)
