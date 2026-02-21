@@ -114,7 +114,7 @@ I (54) boot: Disabling RNG early entropy source...
 
 ### Evidence Custom Bootloader Works:
 - **Bootloader binary size**: `0x5160 bytes` (smaller than default `0x52a0`)
-- **Build logs show**: Our `bootloader_components/main` component used instead of ESP-IDF default
+- **Build logs show**: Our `bootloader_components/boot_core` component used instead of ESP-IDF default
 - **No boot failures**: System starts successfully every time
 - **Application runs**: Device reconnects reliably after reset
 
@@ -176,14 +176,14 @@ Evidence policy:
 ## Project Structure
 ```
 waveshare_esp32c3_zero_bootloader/
-├── CMakeLists.txt              # Top-level project (includes bootloader_components)
-├── sdkconfig.defaults          # Minimal bootloader config  
+├── CMakeLists.txt              # Top-level project (includes bootloader_components, app_test)
+├── sdkconfig.defaults          # Minimal bootloader config
 ├── partitions.csv              # Partition table (NVS + factory app)
-├── main/
+├── app_test/
 │   ├── CMakeLists.txt
-│   └── main.c                  # Test application
+│   └── main.c                  # Validation/integration app
 ├── bootloader_components/
-│   └── main/                   # ← Custom bootloader (replaces ESP-IDF default)
+│   └── boot_core/              # ← Custom bootloader (replaces ESP-IDF default)
 │       ├── CMakeLists.txt
 │       └── main.c              # Custom call_start_cpu0() implementation
 └── scripts/
@@ -191,8 +191,8 @@ waveshare_esp32c3_zero_bootloader/
 ```
 
 ## Key Implementation Details
-- **Custom bootloader**: `bootloader_components/main/main.c` contains our `call_start_cpu0()`
-- **Component override**: Our `main` component replaces ESP-IDF's default bootloader main
+- **Custom bootloader**: `bootloader_components/boot_core/main.c` contains our `call_start_cpu0()`
+- **Component override**: Our `boot_core` component replaces ESP-IDF's default bootloader main
 - **USB handling**: Scripts handle ESP32-C3 USB reenumeration during reset
 - **Build verification**: Bootloader size `0x5160 bytes` (vs default `0x52a0`)
 
