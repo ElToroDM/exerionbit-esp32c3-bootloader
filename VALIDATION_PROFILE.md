@@ -21,9 +21,11 @@ Purpose: define the canonical validation execution profile and PASS/FAIL criteri
 Required tokens (ordered):
 
 1. `BL_EVT:DECISION_NORMAL`
-2. `BL_EVT:HANDOFF_APP`
-3. `APP_EVT:START`
-4. `APP_EVT:BOOTLOADER_HANDOFF_OK`
+2. `BL_EVT:UPDATE_CHECK`
+3. `BL_EVT:UPDATE_VERIFY_OK`
+4. `BL_EVT:HANDOFF_APP`
+5. `APP_EVT:START`
+6. `APP_EVT:BOOTLOADER_HANDOFF_OK`
 
 ### T2 Recovery path
 Required:

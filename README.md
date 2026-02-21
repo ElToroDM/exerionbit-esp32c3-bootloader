@@ -91,72 +91,14 @@ I (54) boot: Loaded app from partition at offset 0x10000
 I (54) boot: Disabling RNG early entropy source...
 ```
 
-## ✅ **CUSTOM BOOTLOADER STATUS: WORKING**
+## USB serial behavior
 
-**DISCOVERY**: The custom bootloader IS working correctly! The issue is ESP32-C3's native USB behavior.
-
-### What Actually Happens During RESET:
-1. ✅ **ESP32-C3 connected** (USB functional, monitor working)
-2. 🔄 **RESET pressed** → **USB disconnects immediately** 
-3. 🔄 **ROM bootloader runs** → (USB disconnected - output invisible)
-4. ✅ **Our custom bootloader executes** → (USB disconnected - output invisible)
-5. ✅ **Application starts** → (USB disconnected - output invisible)
-6. 🔄 **Application reinitializes USB CDC** → USB reconnects
-7. 🔌 **Monitor reconnects** → but boot sequence already completed
-
-### Serial Monitor Shows:
-```
---- Error: ClearCommError failed (PermissionError(13, 'The device does not recognize the command.', None, 22))
---- Waiting for the device to reconnect
-```
-**This is NORMAL ESP32-C3 behavior, not an error!**
-
-### Evidence Custom Bootloader Works:
-- **Bootloader binary size**: `0x5160 bytes` (smaller than default `0x52a0`)
-- **Build logs show**: Our `bootloader_components/boot_core` component used instead of ESP-IDF default
-- **No boot failures**: System starts successfully every time
-- **Application runs**: Device reconnects reliably after reset
-
-### To See Full Boot Sequence (Optional):
-1. **External UART**: Connect USB-Serial adapter to GPIO20/21  
-2. **JTAG Debug**: Use ESP-PROG probe with OpenOCD
-3. **Add Boot Delay**: Delay in bootloader before app USB init
+ESP32-C3 native USB CDC disconnects during reset. Early ROM and bootloader output is invisible to
+`idf.py monitor` until the app reinitializes USB. Use `scripts/watch_serial.py` for complete boot
+sequence capture with automatic reconnection. See [SETUP.md](SETUP.md) for full setup, watcher
+flags, and troubleshooting.
 
 ---
-
-## Serial monitoring & capturing full boot logs ✅
-
-ESP32-C3's native USB disconnects during reset, which can hide early ROM/bootloader messages. To reliably capture the entire boot sequence (including early messages printed while USB is disconnected), use the included monitor script instead of `idf.py monitor`:
-
-- Start the script (PowerShell example):
-
-```powershell
-# Use IDF Python environment for correct deps
-$env:IDF_PATH = "C:\esp\esp-idf"
-C:\Users\Admin\.espressif\python_env\idf6.1_py3.11_env\Scripts\python.exe scripts/watch_serial.py --port COM4 --inactivity 10
-```
-
-The watcher was improved to handle transient USB disconnects cleanly and to detect stalls/inactivity. It prefixes each line with a timestamp and line counter and writes `build/bootlog.txt` for deterministic validation and offline analysis.
-
----
-
-
-- What the script does:
-  - Reconnects automatically after USB re-enumeration ✅
-  - Logs to `build/bootlog.txt` ✅
-  
-- Fast iteration (bootloader only):
-```powershell
-# Build only the bootloader (no full app build)
-C:\Users\Admin\.espressif\python_env\idf6.1_py3.11_env\Scripts\python.exe C:\esp\esp-idf\tools\idf.py bootloader
-
-# Flash only the bootloader
-C:\Users\Admin\.espressif\python_env\idf6.1_py3.11_env\Scripts\python.exe C:\esp\esp-idf\tools\idf.py -p COM4 bootloader-flash
-```
-
-Notes:
-- `idf.py monitor` is still useful for its GDB/panic-decoding features, but those initial `idf.py` header lines are printed by the host and will not be numbered by the serial monitor script. Use the script for complete, robust serial capture and numbering.
-- If you prefer the `idf.py monitor` UX and still want every line prefixed, we can add a wrapper that prefixes `idf.py monitor` stdout as well (more invasive; I can implement if required).
 
 ## Validation profile
 
@@ -174,7 +116,7 @@ Evidence policy:
 
 ## Project Structure
 ```
-waveshare_esp32c3_zero_bootloader/
+./
 ├── CMakeLists.txt              # Top-level project (includes bootloader_components, app_test)
 ├── sdkconfig.defaults          # Minimal bootloader config
 ├── partitions.csv              # Partition table (NVS + factory app)

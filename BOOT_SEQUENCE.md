@@ -16,6 +16,10 @@ Normal path percentages:
 - `LOAD_APP`: 20% (800ms)
 - `HANDOFF`: 30% (1200ms)
 
+Note: `BL_EVT:UPDATE_CHECK` and `BL_EVT:UPDATE_VERIFY_OK` are emitted in **all** boot paths
+between `DECISION_NORMAL` and `LOAD_APP`. Their visual duration uses a fixed 4-pulse
+sequence at `UPDATE_PULSE_HZ` and is not allocated within `TOTAL_VISUAL_MS`.
+
 ## 2. Serial token contract
 
 Token format:
