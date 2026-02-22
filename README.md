@@ -62,41 +62,11 @@ To flash the board:
 
 ## Expected Boot Messages
 Look for these in the serial monitor:
-```
-ESP-ROM:esp32c3-api1-20210207
-Build:Feb  7 2021
-rst:0x15 (USB_UART_CHIP_RESET),boot:0x8 (SPI_FAST_FLASH_BOOT)
-Saved PC:0x4038315a
-SPIWP:0xee
-mode:DIO, clock div:1
-load:0x3fcd5830,len:0x1594
-load:0x403cbf10,len:0xc9c
-load:0x403ce710,len:0x3010
-entry 0x403cbf1a
-I (24) boot: ESP-IDF v6.1-dev-2309-g7d7f533357 2nd stage bootloader
-I (24) boot: compile time Feb  2 2026 23:03:36
-I (25) boot: chip revision: v0.4
-I (25) boot: Enabling RNG early entropy source...
-I (25) boot: Partition Table:
-I (26) boot: ## Label            Usage          Type ST Offset   Length
-I (26) boot:  0 nvs              WiFi data        01 02 00009000 00006000
-I (26) boot:  1 phy_init         RF data          01 01 0000f000 00001000
-I (26) boot:  2 factory          factory app      00 00 00010000 00100000
-I (27) boot: End of partition table
-I (27) esp_image: segment 0: paddr=00010020 vaddr=3c010020 size=0736ch ( 29548) map
-I (32) esp_image: segment 1: paddr=00017394 vaddr=3fc89800 size=01840h (  6208) load
-I (39) esp_image: segment 3: paddr=00020020 vaddr=42000020 size=0e5ach ( 58796) map
-I (49) esp_image: segment 4: paddr=0002e5d4 vaddr=4038743c size=02368h (  9064) load
-I (54) boot: Loaded app from partition at offset 0x10000
-I (54) boot: Disabling RNG early entropy source...
-```
+TODO
 
 ## USB serial behavior
 
-ESP32-C3 native USB CDC disconnects during reset. Early ROM and bootloader output is invisible to
-`idf.py monitor` until the app reinitializes USB. Use `scripts/watch_serial.py` for complete boot
-sequence capture with automatic reconnection. See [SETUP.md](SETUP.md) for full setup, watcher
-flags, and troubleshooting.
+ESP32-C3 native USB CDC disconnects during reset. Early ROM and bootloader output is invisible to `idf.py monitor` until the app reinitializes USB. Use `scripts/watch_serial.py` for complete boot sequence capture with automatic reconnection. See [SETUP.md](SETUP.md) for full setup, watcher flags, and troubleshooting.
 
 ---
 
