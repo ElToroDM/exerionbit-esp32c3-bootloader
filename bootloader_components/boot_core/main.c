@@ -189,6 +189,14 @@ void __attribute__((noreturn)) call_start_cpu0(void)
     }
 
     ws2812_init(WS2812_DEFAULT_GPIO);
+
+    // Diagnostic toggle: ensure GPIO can be driven high/low directly
+    ets_printf("WS2812_DIAG: toggling GPIO %d for 500ms each\n", WS2812_DEFAULT_GPIO);
+    REG_WRITE(GPIO_OUT_W1TS_REG, (1U << WS2812_DEFAULT_GPIO));
+    ets_delay_us(500000);
+    REG_WRITE(GPIO_OUT_W1TC_REG, (1U << WS2812_DEFAULT_GPIO));
+    ets_delay_us(500000);
+
     set_led((led_rgb_t){0, 0, 0});
 
     emit_evt(s_normal_phases[0].token);
