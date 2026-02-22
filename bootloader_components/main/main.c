@@ -189,7 +189,6 @@ void __attribute__((noreturn)) call_start_cpu0(void)
     }
 
     ws2812_init(WS2812_DEFAULT_GPIO);
-
     set_led((led_rgb_t){0, 0, 0});
 
     emit_evt(s_normal_phases[0].token);

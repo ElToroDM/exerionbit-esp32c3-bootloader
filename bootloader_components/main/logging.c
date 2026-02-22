@@ -10,7 +10,7 @@ static uint16_t bootlog_index = 0;
 void bootlog_buffer(const char* msg)
 {
     if (!msg || bootlog_index >= BOOTLOG_BUFFER_SIZE - 2) return;
-    
+
     const char* src = msg;
     while (*src && bootlog_index < BOOTLOG_BUFFER_SIZE - 1) {
         bootlog_buf[bootlog_index++] = *src++;

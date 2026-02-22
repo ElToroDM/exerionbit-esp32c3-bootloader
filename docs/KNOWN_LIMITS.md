@@ -28,7 +28,7 @@
 
 ## Component override mechanism
 
-- The `boot_core` component in `bootloader_components/boot_core/` replaces ESP-IDF's default
+- The `main` component in `bootloader_components/main/` replaces ESP-IDF's default
   bootloader main component. This override is validated in CI (see `.github/workflows/`).
 - Build size is tracked as a proxy indicator that the override is active (see `VALIDATION_PROFILE.md`).
 

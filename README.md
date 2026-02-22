@@ -94,7 +94,7 @@ Evidence policy:
 │   ├── CMakeLists.txt
 │   └── main.c                  # Validation/integration app
 ├── bootloader_components/
-│   └── boot_core/              # ← Custom bootloader (replaces ESP-IDF default)
+│   └── main/                   # ← Custom bootloader (replaces ESP-IDF default)
 │       ├── CMakeLists.txt
 │       └── main.c              # Custom call_start_cpu0() implementation
 └── scripts/
@@ -102,8 +102,8 @@ Evidence policy:
 ```
 
 ## Key Implementation Details
-- **Custom bootloader**: `bootloader_components/boot_core/main.c` contains our `call_start_cpu0()`
-- **Component override**: Our `boot_core` component replaces ESP-IDF's default bootloader main
+- **Custom bootloader**: `bootloader_components/main/main.c` contains our `call_start_cpu0()`
+- **Component override**: Our `main` component replaces ESP-IDF's default bootloader main
 - **USB handling**: Scripts handle ESP32-C3 USB reenumeration during reset
 - **Build verification**: Bootloader size `0x5160 bytes` (vs default `0x52a0`)
 
