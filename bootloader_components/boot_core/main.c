@@ -184,11 +184,16 @@ void __attribute__((noreturn)) call_start_cpu0(void)
     configure_input_gpio(UPDATE_TRIGGER_GPIO);
     configure_input_gpio(CRC_FAIL_TRIGGER_GPIO);
 
+    ets_printf("BL_DEBUG:bootloader_init_start\n");
     if (bootloader_init() != ESP_OK) {
+        ets_printf("BL_DEBUG:bootloader_init_failed\n");
         fatal_reset_loop(1U);
     }
+    ets_printf("BL_DEBUG:bootloader_init_ok\n");
 
+    ets_printf("BL_DEBUG:ws2812_init_start\n");
     ws2812_init(WS2812_DEFAULT_GPIO);
+    ets_printf("BL_DEBUG:ws2812_init_ok\n");
 
     // Diagnostic toggle: ensure GPIO can be driven high/low directly
     ets_printf("WS2812_DIAG: toggling GPIO %d for 500ms each\n", WS2812_DEFAULT_GPIO);
