@@ -62,7 +62,30 @@ To flash the board:
 
 ## Expected Boot Messages
 Look for these in the serial monitor:
-TODO
+
+Normal path (ordered):
+- `BL_EVT:INIT`
+- `BL_EVT:HW_READY`
+- `BL_EVT:PARTITION_TABLE_OK`
+- `BL_EVT:DECISION_NORMAL`
+- `BL_EVT:APP_CRC_CHECK`
+- `BL_EVT:APP_CRC_OK`
+- `BL_EVT:LOAD_APP`
+- `BL_EVT:HANDOFF`
+- `BL_EVT:HANDOFF_APP`
+- `APP_EVT:START`
+- `APP_EVT:BOOTLOADER_HANDOFF_OK`
+
+Selector/update path (`GPIO9`):
+- `BL_EVT:MODE_SELECT_ARMED`
+- `BL_EVT:MODE_SELECTED:UPDATE` (and mode cycling on short press)
+- `BL_EVT:MODE_EXECUTE:UPDATE` (long press)
+- followed by normal CRC + handoff sequence
+
+Recovery hold path:
+- `BL_EVT:DECISION_RECOVERY`
+- `BL_EVT:RECOVERY_HEARTBEAT:<n>` every 5s
+- no `BL_EVT:HANDOFF_APP` while recovery is active
 
 ## USB serial behavior
 

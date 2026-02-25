@@ -11,7 +11,10 @@ REQUIRED_ORDER = [
     "BL_EVT:HW_READY",
     "BL_EVT:PARTITION_TABLE_OK",
     "BL_EVT:DECISION_NORMAL",
+    "BL_EVT:APP_CRC_CHECK",
+    "BL_EVT:APP_CRC_OK",
     "BL_EVT:LOAD_APP",
+    "BL_EVT:HANDOFF",
     "BL_EVT:HANDOFF_APP",
     "APP_EVT:START",
     "APP_EVT:BOOTLOADER_HANDOFF_OK",
@@ -55,11 +58,24 @@ def check_recovery(lines: list[str]) -> tuple[bool, str]:
     return True, "Recovery path observed without app handoff."
 
 
+def check_crc_fail_safety(lines: list[str]) -> tuple[bool, str]:
+    crc_fail_idx = next((i for i, line in enumerate(lines) if "BL_EVT:APP_CRC_FAIL" in line), -1)
+    if crc_fail_idx == -1:
+        return True, "CRC fail path not observed in this log (non-blocking)."
+
+    handoff_after_crc_fail = any("BL_EVT:HANDOFF_APP" in line for line in lines[crc_fail_idx + 1 :])
+    if handoff_after_crc_fail:
+        return False, "CRC fail observed but app handoff occurred afterward in same trace."
+
+    return True, "CRC fail path observed without app handoff."
+
+
 def run_validation(log_path: Path) -> int:
     lines = load_lines(log_path)
 
     success, failures = find_in_order(lines, REQUIRED_ORDER)
     recovery_ok, recovery_msg = check_recovery(lines)
+    crc_fail_ok, crc_fail_msg = check_crc_fail_safety(lines)
 
     print("=== ESP32-C3 Bootlog Validation ===")
     print(f"Log: {log_path}")
@@ -70,13 +86,14 @@ def run_validation(log_path: Path) -> int:
         print(f"[{status}] {token}")
 
     print(f"[{'PASS' if recovery_ok else 'FAIL'}] {recovery_msg}")
+    print(f"[{'PASS' if crc_fail_ok else 'FAIL'}] {crc_fail_msg}")
 
     if not success:
         print("\nValidation failures:")
         for failure in failures:
             print(f"- {failure}")
 
-    final_ok = success and recovery_ok
+    final_ok = success and recovery_ok and crc_fail_ok
     print(f"\nFINAL: {'PASS' if final_ok else 'FAIL'}")
     return 0 if final_ok else 1
 
