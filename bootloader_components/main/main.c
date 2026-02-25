@@ -11,6 +11,7 @@
 #include "rom/ets_sys.h"
 #include "soc/gpio_reg.h"
 #include "soc/rtc_cntl_reg.h"
+#include "hal/wdt_hal.h"
 #include "ws2812.h"
 
 #define TOTAL_VISUAL_MS            4000U
@@ -19,12 +20,10 @@
 #define BOOT_GPIO                  9
 
 // Mode selector timing (see BOOT_SEQUENCE.md §4 and §8)
-#define GUARD_RELEASE_MS           120U
-#define ARM_HOLD_MS                600U
+#define ARM_DETECT_MS              60U
 #define SHORT_PRESS_MIN_MS         60U
 #define SHORT_PRESS_MAX_MS         250U
 #define LONG_PRESS_MIN_MS          700U
-#define SELECT_TIMEOUT_MS          2500U
 
 #define UPDATE_PULSE_HZ            2U
 #define UPDATE_VERIFY_OK_MS        200U
@@ -82,11 +81,38 @@ static const char *const s_mode_ring_names[] = {
     "NORMAL",
 };
 
+static const led_rgb_t s_mode_ring_colors[] = {
+    {16, 10, 0},
+    {20, 0, 20},
+    {0, 20, 0},
+};
+
 #define MODE_RING_SIZE (sizeof(s_mode_ring) / sizeof(s_mode_ring[0]))
+
+static void feed_watchdog(void);
 
 static void delay_ms(uint32_t delay_ms_value)
 {
-    ets_delay_us(delay_ms_value * 1000U);
+    while (delay_ms_value >= 10U) {
+        ets_delay_us(10000U);
+        feed_watchdog();
+        delay_ms_value -= 10U;
+    }
+
+    if (delay_ms_value > 0U) {
+        ets_delay_us(delay_ms_value * 1000U);
+        feed_watchdog();
+    }
+}
+
+static void feed_watchdog(void)
+{
+#ifdef CONFIG_BOOTLOADER_WDT_ENABLE
+    wdt_hal_context_t rwdt_ctx = RWDT_HAL_CONTEXT_DEFAULT();
+    wdt_hal_write_protect_disable(&rwdt_ctx);
+    wdt_hal_feed(&rwdt_ctx);
+    wdt_hal_write_protect_enable(&rwdt_ctx);
+#endif
 }
 
 static uint32_t phase_duration_ms(uint8_t percentage)
@@ -163,7 +189,7 @@ static void fatal_reset_loop(uint32_t code)
     }
 }
 
-// App image CRC check — runs in all boot paths between DECISION_NORMAL and LOAD_APP.
+// App image CRC check — runs in all boot paths between decision and LOAD_APP.
 // Forced fail is available via build config for validation only (not a public GPIO).
 static bool run_app_crc_check(const bootloader_state_t *boot_state)
 {
@@ -202,17 +228,15 @@ static bool run_app_crc_check(const bootloader_state_t *boot_state)
 static boot_mode_t run_mode_selector(void)
 {
     uint32_t hold_ms;
-
-    // Post-reset stabilization: let any transient button state settle
-    delay_ms(GUARD_RELEASE_MS);
+    uint32_t mode_idx;
 
     if (!gpio_level_low(BOOT_GPIO)) {
         return BOOT_MODE_NORMAL;
     }
 
-    // Button held at guard point - time the hold to arm
+    // Button held at guard point - wait a short stable hold to arm
     hold_ms = 0U;
-    while (hold_ms < ARM_HOLD_MS) {
+    while (hold_ms < ARM_DETECT_MS) {
         if (!gpio_level_low(BOOT_GPIO)) {
             // Released before arm threshold - proceed with normal boot
             return BOOT_MODE_NORMAL;
@@ -221,25 +245,23 @@ static boot_mode_t run_mode_selector(void)
         hold_ms += 10U;
     }
 
-    // Selector armed
+    // Selector armed: enter first mode and show its color
     emit_evt("MODE_SELECT_ARMED");
-    set_led((led_rgb_t){0, 8, 16}); // BLUE soft: armed indicator
-
-    // Wait for button release before entering mode ring
-    while (gpio_level_low(BOOT_GPIO)) {
-        delay_ms(10U);
-    }
-
-    // Enter first mode in ring: UPDATE
-    uint32_t mode_idx = 0U;
+    mode_idx = 0U;
+    set_led(s_mode_ring_colors[mode_idx]);
     ets_printf("BL_EVT:MODE_SELECTED:%s\n", s_mode_ring_names[mode_idx]);
 
-    // Interaction loop: short press = cycle, long press = execute, timeout = NORMAL
-    uint32_t timeout_ms = 0U;
-    while (timeout_ms < SELECT_TIMEOUT_MS) {
+    // Wait for button release; release alone does not change selection
+    while (gpio_level_low(BOOT_GPIO)) {
+        delay_ms(10U);
+        feed_watchdog();
+    }
+
+    // Interaction loop: short press = cycle, long press = execute
+    for (;;) {
+        feed_watchdog();
         if (!gpio_level_low(BOOT_GPIO)) {
             delay_ms(10U);
-            timeout_ms += 10U;
             continue;
         }
 
@@ -247,12 +269,10 @@ static boot_mode_t run_mode_selector(void)
         uint32_t press_ms = 0U;
         while (gpio_level_low(BOOT_GPIO)) {
             delay_ms(10U);
+            feed_watchdog();
             press_ms += 10U;
             if (press_ms >= LONG_PRESS_MIN_MS) {
-                // Long press confirmed - wait for release then execute
-                while (gpio_level_low(BOOT_GPIO)) {
-                    delay_ms(10U);
-                }
+                // Long press confirmed - execute current mode immediately
                 ets_printf("BL_EVT:MODE_EXECUTE:%s\n", s_mode_ring_names[mode_idx]);
                 return s_mode_ring[mode_idx];
             }
@@ -261,16 +281,11 @@ static boot_mode_t run_mode_selector(void)
         if (press_ms >= SHORT_PRESS_MIN_MS && press_ms <= SHORT_PRESS_MAX_MS) {
             // Short press: advance to next mode in ring
             mode_idx = (mode_idx + 1U) % MODE_RING_SIZE;
+            set_led(s_mode_ring_colors[mode_idx]);
             ets_printf("BL_EVT:MODE_SELECTED:%s\n", s_mode_ring_names[mode_idx]);
         }
         // else: bounce or sub-minimum press - ignore
-
-        delay_ms(10U);
-        timeout_ms += 10U;
     }
-
-    // Interaction timeout - fall back to normal boot
-    return BOOT_MODE_NORMAL;
 }
 
 // Main Bootloader Entry Point
@@ -313,7 +328,11 @@ void __attribute__((noreturn)) call_start_cpu0(void)
         enter_recovery_loop();
     }
 
-    emit_evt(s_normal_phases[3].token);  // DECISION_NORMAL
+    if (selected_mode == BOOT_MODE_UPDATE) {
+        emit_evt("DECISION_UPDATE");
+    } else {
+        emit_evt(s_normal_phases[3].token);  // DECISION_NORMAL
+    }
     set_led(s_normal_phases[3].color);
     delay_ms(phase_duration_ms(s_normal_phases[3].visual_percent));
 

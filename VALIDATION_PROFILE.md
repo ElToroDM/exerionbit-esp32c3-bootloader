@@ -20,7 +20,7 @@ Purpose: define the canonical validation execution profile and PASS/FAIL criteri
 ### T1 Normal path
 Required tokens (ordered):
 
-1. `BL_EVT:DECISION_NORMAL`
+1. `BL_EVT:DECISION_NORMAL` or `BL_EVT:DECISION_UPDATE` (update execution emits `DECISION_UPDATE`)
 2. `BL_EVT:APP_CRC_CHECK`
 3. `BL_EVT:APP_CRC_OK`
 4. `BL_EVT:LOAD_APP`

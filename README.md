@@ -80,7 +80,8 @@ Selector/update path (`GPIO9`):
 - `BL_EVT:MODE_SELECT_ARMED`
 - `BL_EVT:MODE_SELECTED:UPDATE` (and mode cycling on short press)
 - `BL_EVT:MODE_EXECUTE:UPDATE` (long press)
-- followed by normal CRC + handoff sequence
+- `BL_EVT:DECISION_UPDATE` will be emitted when update mode is executed; the bootloader also publishes `BOOT_CTX_UPDATE` to the application.
+- followed by CRC verification + handoff sequence.
 
 Recovery hold path:
 - `BL_EVT:DECISION_RECOVERY`

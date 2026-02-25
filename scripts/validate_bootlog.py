@@ -10,7 +10,8 @@ REQUIRED_ORDER = [
     "BL_EVT:INIT",
     "BL_EVT:HW_READY",
     "BL_EVT:PARTITION_TABLE_OK",
-    "BL_EVT:DECISION_NORMAL",
+    # Accept either DECISION_NORMAL or DECISION_UPDATE as the decision token
+    "BL_EVT:DECISION_ANY",
     "BL_EVT:APP_CRC_CHECK",
     "BL_EVT:APP_CRC_OK",
     "BL_EVT:LOAD_APP",
@@ -34,10 +35,17 @@ def find_in_order(lines: list[str], required_tokens: list[str]) -> tuple[bool, l
     for token in required_tokens:
         found = False
         while index < len(lines):
-            if token in lines[index]:
-                found = True
-                index += 1
-                break
+            line = lines[index]
+            if token == "BL_EVT:DECISION_ANY":
+                if "BL_EVT:DECISION_NORMAL" in line or "BL_EVT:DECISION_UPDATE" in line:
+                    found = True
+                    index += 1
+                    break
+            else:
+                if token in line:
+                    found = True
+                    index += 1
+                    break
             index += 1
 
         if not found:

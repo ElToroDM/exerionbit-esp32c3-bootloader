@@ -8,6 +8,7 @@ idf_component_register(
         "."
     REQUIRES
         bootloader_support
+        esp_hal_wdt
         log
         spi_flash
 )

@@ -78,18 +78,14 @@ Boot decisions are deterministic and based on a single explicit input:
 Input sampling uses repeated low-level reads with fixed delay to avoid transient decisions.
 
 Selector rules (`GPIO9`):
-- Selector must be armed only after reset boot has started (no requirement to hold button during reset).
-- `GUARD_RELEASE_MS` enforces a short post-reset stabilization and release guard.
-- If button remains pressed for `ARM_HOLD_MS`, selector mode is armed and emits `BL_EVT:MODE_SELECT_ARMED`.
-- On release after arming, selector enters first mode and emits `BL_EVT:MODE_SELECTED:<mode>`.
-- Short press (`SHORT_PRESS_MIN_MS..SHORT_PRESS_MAX_MS`) cycles to next mode (circular ring).
-- Long press (`LONG_PRESS_MIN_MS`) executes selected mode and emits `BL_EVT:MODE_EXECUTE:<mode>`.
-
-Default selector mode ring (circular):
-- `UPDATE` -> `RECOVERY` -> `NORMAL` -> `UPDATE`
-
-Safety timeout:
-- if no valid interaction within `SELECT_TIMEOUT_MS`, boot proceeds in `NORMAL` path.
+- Selector can be armed immediately (holding BOOT from the reset/power-on moment).
+- A short stable hold (`ARM_DETECT_MS`, currently 60 ms) arms the selector and emits `BL_EVT:MODE_SELECT_ARMED`.
+- On release after arming the selector enters the first mode and emits `BL_EVT:MODE_SELECTED:<mode>`; the release itself does not execute a mode.
+- Subsequent interaction semantics (after release):
+  - Short press (`SHORT_PRESS_MIN_MS..SHORT_PRESS_MAX_MS`) cycles to the next mode in the ring.
+  - Long press (`LONG_PRESS_MIN_MS`) executes the currently selected mode and emits `BL_EVT:MODE_EXECUTE:<mode>`.
+- Default selector mode ring (circular): `UPDATE` -> `RECOVERY` -> `NORMAL` -> `UPDATE`.
+- There is no selection timeout in the baseline: once armed the selector remains active until a long‑press executes a mode or the operator cancels by power/reset.
 
 ## 5. Recovery behavior
 
@@ -136,12 +132,10 @@ Behavior:
 ## 8. Selector timing profile (baseline)
 
 Reference timing constants (subject to tuning per board stability):
-- `GUARD_RELEASE_MS = 120`
-- `ARM_HOLD_MS = 600`
+- `ARM_DETECT_MS = 60` (short stable hold to arm selector)
 - `SHORT_PRESS_MIN_MS = 60`
 - `SHORT_PRESS_MAX_MS = 250`
 - `LONG_PRESS_MIN_MS = 700`
-- `SELECT_TIMEOUT_MS = 2500`
 
 These values are selected for:
 - compatibility with single-button boards

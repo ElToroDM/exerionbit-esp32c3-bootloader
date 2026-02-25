@@ -88,10 +88,13 @@ This document collects environment, installation, monitoring, and troubleshootin
   - Temporarily increase boot delay in bootloader for debugging
 
 ## Selector flow (GPIO9)
-- Hold the BOOT button (GPIO9) for ~600 ms once the bootloader is running to enter the "armed" state; the bootloader emits `BL_EVT:MODE_SELECT_ARMED` and lights a blue LED pattern.
-- Release, then use short presses (60 ms–250 ms) to cycle `UPDATE → RECOVERY → NORMAL`; each change emits `BL_EVT:MODE_SELECTED:<mode>`.
-- A long press (≥700 ms) executes the highlighted mode and emits `BL_EVT:MODE_EXECUTE:<mode>`.
-- No interaction within ~2.5 s reverts to the default `NORMAL` run.
+- The selector can be armed by holding the BOOT button (GPIO9) from reset/power-on.
+- A short stable hold (`ARM_DETECT_MS = 60 ms`) arms the selector and emits `BL_EVT:MODE_SELECT_ARMED` and lights the first mode color.
+- Release after arming: the release itself does not execute a mode; it simply readies the selector for button interaction.
+- After release:
+  - Short presses (60 ms–250 ms) cycle `UPDATE → RECOVERY → NORMAL` (circular), each change emits `BL_EVT:MODE_SELECTED:<mode>` and updates the LED color.
+  - A long press (≥700 ms) executes the currently selected mode and emits `BL_EVT:MODE_EXECUTE:<mode>`.
+- There is no automatic selection timeout in the baseline; once armed, the selector remains active until a long press executes a mode or the device is reset.
 
 ## Workspace / editor hints
 - VS Code (workspace) may include `idf.pythonBinPath`; ensure it points to the IDF Python env used by your IDF install.
