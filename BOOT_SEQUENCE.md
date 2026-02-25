@@ -39,6 +39,9 @@ Implemented state tokens:
 - `BL_EVT:HANDOFF`
 - `BL_EVT:HANDOFF_APP`
 - `BL_EVT:FATAL_RESET`
+- `BL_EVT:MODE_SELECT_ARMED`
+- `BL_EVT:MODE_SELECTED:<mode>`
+- `BL_EVT:MODE_EXECUTE:<mode>`
 
 Additional diagnostic tokens:
 - `BL_EVT:RECOVERY_HEARTBEAT:<n>`
@@ -64,14 +67,25 @@ Recovery/update/fatal:
 
 ## 4. Explicit decision inputs
 
-Boot decisions are deterministic and based on explicit GPIO inputs:
+Boot decisions are deterministic and based on a single explicit input:
 
-- Recovery trigger: `GPIO9` held low (stable sampled)
-- Update candidate trigger: `GPIO8` held low (stable sampled)
-- Forced CRC mismatch trigger (test path): `GPIO7` held low (stable sampled)
-
+- `GPIO9` (BOOT button)
 
 Input sampling uses repeated low-level reads with fixed delay to avoid transient decisions.
+
+Selector rules (`GPIO9`):
+- Selector must be armed only after reset boot has started (no requirement to hold button during reset).
+- `GUARD_RELEASE_MS` enforces a short post-reset stabilization and release guard.
+- If button remains pressed for `ARM_HOLD_MS`, selector mode is armed and emits `BL_EVT:MODE_SELECT_ARMED`.
+- On release after arming, selector enters first mode and emits `BL_EVT:MODE_SELECTED:<mode>`.
+- Short press (`SHORT_PRESS_MIN_MS..SHORT_PRESS_MAX_MS`) cycles to next mode (circular ring).
+- Long press (`LONG_PRESS_MIN_MS`) executes selected mode and emits `BL_EVT:MODE_EXECUTE:<mode>`.
+
+Default selector mode ring (circular):
+- `UPDATE` -> `RECOVERY` -> `NORMAL` -> `UPDATE`
+
+Safety timeout:
+- if no valid interaction within `SELECT_TIMEOUT_MS`, boot proceeds in `NORMAL` path.
 
 ## 5. Recovery behavior
 
@@ -80,17 +94,26 @@ Input sampling uses repeated low-level reads with fixed delay to avoid transient
 - LED remains MAGENTA bright steady.
 - Heartbeat token is emitted every 5 seconds.
 
+Recovery console baseline (public scope):
+- `status`: print build/version, reset reason, last boot error code.
+- `reboot`: perform controlled reboot.
+- `enter_update`: exit hold and run update path.
+
 ## 6. Update + CRC baseline behavior
 
-- Update evaluation state is always emitted via `BL_EVT:UPDATE_CHECK`.
+- Update mode is entered through `GPIO9` selector (`MODE_EXECUTE:UPDATE`) or recovery command (`enter_update`).
+- Update evaluation state is emitted via `BL_EVT:UPDATE_CHECK`.
 - CRC baseline uses descriptor CRC (`factory.offset` + `factory.size`) with `esp_rom_crc32_le`.
-- On forced mismatch (`GPIO7`):
+- On verify fail:
   - emits `BL_EVT:UPDATE_VERIFY_FAIL`
   - does not handoff app
   - enters recovery hold path
 - On pass:
   - emits `BL_EVT:UPDATE_VERIFY_OK`
   - proceeds to `LOAD_APP` and `HANDOFF`
+
+Test-path note:
+- Forced CRC mismatch for validation is enabled by build/test configuration, not by dedicated public GPIO pins.
 
 ## 7. Fatal behavior
 
@@ -103,3 +126,18 @@ Behavior:
 - emits `BL_EVT:FATAL_RESET`
 - emits `BL_EVT:FATAL_RESET_CODE:<code>`
 - blinks RED at ~3Hz and periodically requests reset
+
+## 8. Selector timing profile (baseline)
+
+Reference timing constants (subject to tuning per board stability):
+- `GUARD_RELEASE_MS = 120`
+- `ARM_HOLD_MS = 600`
+- `SHORT_PRESS_MIN_MS = 60`
+- `SHORT_PRESS_MAX_MS = 250`
+- `LONG_PRESS_MIN_MS = 700`
+- `SELECT_TIMEOUT_MS = 2500`
+
+These values are selected for:
+- compatibility with single-button boards
+- deterministic operator behavior
+- low accidental mode activation during normal resets
