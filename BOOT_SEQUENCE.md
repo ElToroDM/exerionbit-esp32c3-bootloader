@@ -16,7 +16,7 @@ Normal path percentages:
 - `LOAD_APP`: 20% (800ms)
 - `HANDOFF`: 30% (1200ms)
 
-Note: `BL_EVT:UPDATE_CHECK` and `BL_EVT:UPDATE_VERIFY_OK` are emitted in **all** boot paths
+Note: `BL_EVT:APP_CRC_CHECK` and `BL_EVT:APP_CRC_OK` are emitted in **all** boot paths
 between `DECISION_NORMAL` and `LOAD_APP`. Their visual duration uses a fixed 4-pulse
 sequence at `UPDATE_PULSE_HZ` and is not allocated within `TOTAL_VISUAL_MS`.
 
@@ -32,9 +32,9 @@ Implemented state tokens:
 - `BL_EVT:PARTITION_TABLE_OK`
 - `BL_EVT:DECISION_NORMAL`
 - `BL_EVT:DECISION_RECOVERY`
-- `BL_EVT:UPDATE_CHECK`
-- `BL_EVT:UPDATE_VERIFY_OK`
-- `BL_EVT:UPDATE_VERIFY_FAIL`
+- `BL_EVT:APP_CRC_CHECK`
+- `BL_EVT:APP_CRC_OK`
+- `BL_EVT:APP_CRC_FAIL`
 - `BL_EVT:LOAD_APP`
 - `BL_EVT:HANDOFF`
 - `BL_EVT:HANDOFF_APP`
@@ -47,6 +47,10 @@ Additional diagnostic tokens:
 - `BL_EVT:RECOVERY_HEARTBEAT:<n>`
 - `BL_EVT:FATAL_RESET_CODE:<code>`
 
+Token sequence note:
+- `BL_EVT:HANDOFF`: bootloader cleanup complete, app entry pending (LED GREEN bright).
+- `BL_EVT:HANDOFF_APP`: CPU jump to application imminent (LED OFF); last token emitted before control transfers.
+
 ## 3. LED mapping
 
 Normal path:
@@ -56,13 +60,13 @@ Normal path:
 - `DECISION_NORMAL`: AMBER `(16,10,0)`
 - `LOAD_APP`: GREEN soft `(0,16,4)`
 - `HANDOFF`: GREEN bright `(0,20,0)`
-- before app jump: OFF `(0,0,0)`
+- `HANDOFF_APP` (immediate pre-jump): OFF `(0,0,0)` — last token before CPU transfers to application
 
 Recovery/update/fatal:
 - `DECISION_RECOVERY`: MAGENTA bright steady `(20,0,20)`
-- `UPDATE_CHECK`: YELLOW pulse `(16,10,0 ↔ 8,5,0 @ 2Hz)`
-- `UPDATE_VERIFY_OK`: GREEN bright `(0,20,0)` for `200ms`
-- `UPDATE_VERIFY_FAIL`: RED bright `(20,0,0)` for `300ms`
+- `APP_CRC_CHECK`: YELLOW pulse `(16,10,0 ↔ 8,5,0 @ 2Hz)` — emitted in all paths
+- `APP_CRC_OK`: GREEN brief `(0,20,0)` for `200ms` — emitted in all paths
+- `APP_CRC_FAIL`: RED brief `(20,0,0)` for `300ms` — emitted in all paths
 - `FATAL_RESET`: RED blink `(20,0,0 @ ~3Hz)` until reset
 
 ## 4. Explicit decision inputs
@@ -99,17 +103,19 @@ Recovery console baseline (public scope):
 - `reboot`: perform controlled reboot.
 - `enter_update`: exit hold and run update path.
 
-## 6. Update + CRC baseline behavior
+## 6. App CRC verification (all paths)
 
-- Update mode is entered through `GPIO9` selector (`MODE_EXECUTE:UPDATE`) or recovery command (`enter_update`).
-- Update evaluation state is emitted via `BL_EVT:UPDATE_CHECK`.
+- App image CRC is verified in **all** boot paths between `DECISION_NORMAL` and `LOAD_APP`.
+- **Security Scope:** This baseline check provides *integrity* validation against corruption or incomplete updates. Cryptographic *authenticity* (hardware Secure Boot) is configured separately via eFuses and is outside the scope of this sequence document.
+- In update mode (`MODE_EXECUTE:UPDATE` or recovery `enter_update`), the same check validates the newly targeted image before handoff.
+- CRC check is announced via `BL_EVT:APP_CRC_CHECK`.
 - CRC baseline uses descriptor CRC (`factory.offset` + `factory.size`) with `esp_rom_crc32_le`.
 - On verify fail:
-  - emits `BL_EVT:UPDATE_VERIFY_FAIL`
+  - emits `BL_EVT:APP_CRC_FAIL`
   - does not handoff app
   - enters recovery hold path
 - On pass:
-  - emits `BL_EVT:UPDATE_VERIFY_OK`
+  - emits `BL_EVT:APP_CRC_OK`
   - proceeds to `LOAD_APP` and `HANDOFF`
 
 Test-path note:
