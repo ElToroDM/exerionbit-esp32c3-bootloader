@@ -94,10 +94,10 @@ Selector rules (`GPIO9`):
 - LED remains MAGENTA bright steady.
 - Heartbeat token is emitted every 5 seconds.
 
-Recovery console baseline (public scope):
-- `status`: print build/version, reset reason, last boot error code.
-- `reboot`: perform controlled reboot.
-- `enter_update`: exit hold and run update path.
+Recovery console status:
+- Current public baseline: command parser is not implemented yet.
+- Recovery behavior is hold + heartbeat only (`BL_EVT:RECOVERY_HEARTBEAT:<n>`).
+- Planned command baseline (next cycle): `status`, `reboot`, `enter_update`, `erase_app`, `boot`.
 
 ## 6. App CRC verification (all paths)
 
@@ -105,7 +105,8 @@ Recovery console baseline (public scope):
 - **Security Scope:** This baseline check provides *integrity* validation against corruption or incomplete updates. Cryptographic *authenticity* (hardware Secure Boot) is configured separately via eFuses and is outside the scope of this sequence document.
 - In update mode (`MODE_EXECUTE:UPDATE` or recovery `enter_update`), the same check validates the newly targeted image before handoff.
 - CRC check is announced via `BL_EVT:APP_CRC_CHECK`.
-- CRC baseline uses descriptor CRC (`factory.offset` + `factory.size`) with `esp_rom_crc32_le`.
+- Current CRC baseline uses descriptor CRC (`factory.offset` + `factory.size`) with `esp_rom_crc32_le`.
+- Full app payload CRC verification is planned for the next cycle.
 - On verify fail:
   - emits `BL_EVT:APP_CRC_FAIL`
   - does not handoff app

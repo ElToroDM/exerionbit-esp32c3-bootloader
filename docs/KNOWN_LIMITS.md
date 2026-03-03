@@ -34,8 +34,19 @@
 
 ## OTA and update protocol
 
-- No OTA partition or update protocol is implemented in this baseline.
+- No UART update receive/write protocol is implemented in this baseline.
+- Update mode currently covers deterministic mode selection, decision tokens, and boot context signaling.
 - The partition table (`partitions.csv`) includes only NVS and factory app partitions.
+
+## Integrity check scope
+
+- Current CRC check is descriptor-level baseline (`factory.offset` + `factory.size`).
+- Full app payload CRC verification is not implemented yet.
+
+## Power-loss and partial-transfer behavior
+
+- Because update receive/write is not implemented yet, no transactional resume/recovery policy exists for interrupted transfers.
+- Future update protocol work must define deterministic behavior for partial transfer and reset/power-loss scenarios before being promoted to production-like baseline claims.
 
 ## Board-specific notes
 

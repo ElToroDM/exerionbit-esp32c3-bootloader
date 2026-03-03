@@ -10,7 +10,7 @@ Minimal ESP-IDF bootloader for the Waveshare ESP32-C3 Zero board.
 
 - Deterministic ESP32-C3 second-stage boot behavior on real hardware baseline
 - Explicit boot decision states with stable serial tokens and LED mapping
-- Reproducible normal/recovery/update baseline suitable for audit-style review
+- Reproducible normal path and selector-driven mode decisions suitable for audit-style review
 
 ## What this repository does not prove
 
@@ -23,12 +23,15 @@ Minimal ESP-IDF bootloader for the Waveshare ESP32-C3 Zero board.
 1. Build and flash using ESP-IDF.
 2. Capture logs with `scripts/watch_serial.py`.
 3. Validate token sequence with the validation profile (`VALIDATION_PROFILE.md`).
+4. Optional: hold `GPIO9` at boot to enter selector and verify mode tokens (`MODE_SELECT_ARMED`, `MODE_SELECTED`, `MODE_EXECUTE`).
 
 ## Known limits
 
 - Live validation requires physical ESP32-C3 hardware access
 - Native USB re-enumeration can hide very early boot lines without watcher tooling
 - Public repository documents baseline behavior, not full production hardening
+- Update receive/write protocol is not implemented yet (update mode is currently a decision/context baseline)
+- CRC check is currently descriptor-level baseline (partition metadata), not full app payload verification
 
 ## Contact
 
@@ -81,12 +84,13 @@ Selector/update path (`GPIO9`):
 - `BL_EVT:MODE_SELECTED:UPDATE` (and mode cycling on short press)
 - `BL_EVT:MODE_EXECUTE:UPDATE` (long press)
 - `BL_EVT:DECISION_UPDATE` will be emitted when update mode is executed; the bootloader also publishes `BOOT_CTX_UPDATE` to the application.
-- followed by CRC verification + handoff sequence.
+- Current baseline: update mode does not receive/write a new image yet; it exercises decision/context flow and then follows the existing CRC + handoff path.
 
 Recovery hold path:
 - `BL_EVT:DECISION_RECOVERY`
 - `BL_EVT:RECOVERY_HEARTBEAT:<n>` every 5s
 - no `BL_EVT:HANDOFF_APP` while recovery is active
+- Current baseline: no UART command parser is implemented in recovery hold yet.
 
 ## USB serial behavior
 
@@ -139,6 +143,9 @@ Evidence policy:
 - Compiler Optimization: **Size (-Os)**
 
 ## Future Extensions
+- UART update protocol (receive/write/verify/apply flow)
+- Recovery console command parser (`status`, `reboot`, `enter_update`, `erase_app`, `boot`)
+- Full app payload CRC verification (beyond descriptor-level baseline)
 - OTA update support (add ota_0, ota_1, otadata partitions)
 - Image signature verification
 - JTAG debugging (add ESP-PROG probe)
