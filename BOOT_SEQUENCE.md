@@ -102,21 +102,56 @@ Recovery console status:
 ## 6. App CRC verification (all paths)
 
 - App image CRC is verified in **all** boot paths between `DECISION_NORMAL` and `LOAD_APP`.
-- **Security Scope:** This baseline check provides *integrity* validation against corruption or incomplete updates. Cryptographic *authenticity* (hardware Secure Boot) is configured separately via eFuses and is outside the scope of this sequence document.
-- In update mode (`MODE_EXECUTE:UPDATE` or recovery `enter_update`), the same check validates the newly targeted image before handoff.
+- **Security Scope:** This baseline check provides *integrity* validation against corruption or
+  incomplete updates. Cryptographic *authenticity* (hardware Secure Boot) is configured separately
+  via eFuses and is outside the scope of this sequence document.
+- In update mode (`MODE_EXECUTE:UPDATE` or recovery `enter_update`), the same check validates
+  the newly targeted image before handoff.
 - CRC check is announced via `BL_EVT:APP_CRC_CHECK`.
-- Current CRC baseline uses descriptor CRC (`factory.offset` + `factory.size`) with `esp_rom_crc32_le`.
-- Full app payload CRC verification is planned for the next cycle.
-- On verify fail:
-  - emits `BL_EVT:APP_CRC_FAIL`
-  - does not handoff app
-  - enters recovery hold path
-- On pass:
+
+### CRC layout (v0.2 baseline — production)
+
+The app partition is laid out as:
+
+```
+[ app image: image_size bytes ][ 0xFF padding ][ image_size: uint32_t LE ][ crc32: uint32_t LE ]
+```
+
+Partition end (last 8 bytes) = **descriptor**:
+- **Offset** in partition: `partition_size - 8`
+- **Bytes 0-3 (LE):** Image size in bytes (tells bootloader how many bytes to hash)
+- **Bytes 4-7 (LE):** CRC32 computed over exactly `image_size` bytes, starting at partition offset 0
+
+Why image_size + descriptor:
+- Bootloader reads 8-byte descriptor first, validates image_size bounds
+- Hashes only the app image bytes specified by image_size — immune to 0xFF padding variance
+- esptool SHA fields are inside the app image, so any modifications still match the stored CRC
+
+CRC algorithm: **CRC-32/ISO-HDLC**
+- Polynomial: 0xEDB88320 (reflected)
+- Initial value: 0x00000000
+- Final XOR: none
+- Equivalent: `zlib.crc32(data) & 0xFFFFFFFF` (Python)
+- Equivalent: `esp_rom_crc32_le(0, buf, len)` (bootloader C, incremental)
+
+Tooling: `scripts/append_crc.py <app_image>` generates the full partition image with descriptor.
+
+### Behavior on result
+
+On verify pass:
   - emits `BL_EVT:APP_CRC_OK`
   - proceeds to `LOAD_APP` and `HANDOFF`
 
-Test-path note:
-- Forced CRC mismatch for validation is enabled by build/test configuration, not by dedicated public GPIO pins.
+On verify fail:
+  - emits `BL_EVT:APP_CRC_FAIL`
+  - does not handoff app
+  - enters recovery hold path
+
+### Test-path note
+
+Forced CRC mismatch for validation is enabled via `CONFIG_BOOTLOADER_TEST_CRC_FORCE_FAIL`
+(build/Kconfig option). This corrupts the observed CRC before comparison without touching
+flash content. Not exposed via any public GPIO.
 
 ## 7. Fatal behavior
 

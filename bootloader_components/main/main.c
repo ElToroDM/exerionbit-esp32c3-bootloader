@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #include "sdkconfig.h"
+#include "bootloader_flash_priv.h"
 #include "bootloader_init.h"
 #include "bootloader_utility.h"
 #include "esp_rom_crc.h"
@@ -153,11 +154,40 @@ static bool gpio_level_low(int gpio)
     return ((REG_READ(GPIO_IN_REG) & (1U << gpio)) == 0U);
 }
 
-static uint32_t calculate_partition_descriptor_crc(const bootloader_state_t *boot_state)
+// Descriptor stored in the last 8 bytes of the app partition:
+//   [image_size: uint32_t LE][crc32: uint32_t LE]
+// CRC32 matches esp_rom_crc32_le(0, ...) == zlib.crc32(data) & 0xFFFFFFFF.
+typedef struct {
+    uint32_t image_size;
+    uint32_t crc32;
+} __attribute__((packed)) app_crc_descriptor_t;
+
+#define APP_CRC_DESCRIPTOR_SIZE  sizeof(app_crc_descriptor_t)
+
+// Read 'length' bytes from flash at 'offset' and compute CRC-32.
+// esp_rom_crc32_le(0, buf, len) == zlib.crc32(data) & 0xFFFFFFFF.
+// Init with 0 and no final XOR to match the host tool (scripts/append_crc.py).
+// Returns 0 on any flash read error (forces mismatch).
+#define CRC_READ_CHUNK_SIZE    256U
+
+static uint32_t compute_flash_crc32(uint32_t offset, uint32_t length)
 {
-    uint32_t crc = UINT32_MAX;
-    crc = esp_rom_crc32_le(crc, (const uint8_t *)&boot_state->factory.offset, sizeof(boot_state->factory.offset));
-    crc = esp_rom_crc32_le(crc, (const uint8_t *)&boot_state->factory.size, sizeof(boot_state->factory.size));
+    static uint8_t s_crc_chunk[CRC_READ_CHUNK_SIZE];
+    uint32_t crc = 0U;
+    uint32_t remaining = length;
+    uint32_t addr = offset;
+
+    while (remaining > 0U) {
+        uint32_t to_read = (remaining < CRC_READ_CHUNK_SIZE) ? remaining : CRC_READ_CHUNK_SIZE;
+        esp_err_t err = bootloader_flash_read(addr, s_crc_chunk, to_read, false);
+        if (err != ESP_OK) {
+            return 0U;
+        }
+        crc = esp_rom_crc32_le(crc, s_crc_chunk, to_read);
+        addr += to_read;
+        remaining -= to_read;
+    }
+
     return crc;
 }
 
@@ -190,10 +220,18 @@ static void fatal_reset_loop(uint32_t code)
 }
 
 // App image CRC check — runs in all boot paths between decision and LOAD_APP.
-// Forced fail is available via build config for validation only (not a public GPIO).
+//
+// Partition layout (last 8 bytes are the CRC descriptor):
+//   [ app image: image_size bytes ][ 0xFF padding ][ image_size: 4 B LE ][ crc32: 4 B LE ]
+//
+// CRC algorithm: CRC-32/ISO-HDLC over the app image bytes only.
+// Host tool: scripts/append_crc.py
+// Forced fail: CONFIG_BOOTLOADER_TEST_CRC_FORCE_FAIL (Kconfig, validation only)
 static bool run_app_crc_check(const bootloader_state_t *boot_state)
 {
     const uint32_t half_period_ms = 1000U / (UPDATE_PULSE_HZ * 2U);
+    const uint32_t flash_offset   = boot_state->factory.offset;
+    const uint32_t partition_size = boot_state->factory.size;
 
     emit_evt("APP_CRC_CHECK");
     for (int pulse = 0; pulse < 4; ++pulse) {
@@ -203,14 +241,43 @@ static bool run_app_crc_check(const bootloader_state_t *boot_state)
         delay_ms(half_period_ms);
     }
 
-    uint32_t observed_crc = calculate_partition_descriptor_crc(boot_state);
-    uint32_t expected_crc = observed_crc;
+    // Partition must be large enough to hold at least the 8-byte descriptor
+    if (partition_size < APP_CRC_DESCRIPTOR_SIZE) {
+        emit_evt("APP_CRC_FAIL");
+        set_led((led_rgb_t){20, 0, 0});
+        delay_ms(UPDATE_VERIFY_FAIL_MS);
+        return false;
+    }
+
+    // Read the 8-byte descriptor from the end of the partition
+    app_crc_descriptor_t descriptor = {0};
+    const uint32_t desc_offset = flash_offset + partition_size - APP_CRC_DESCRIPTOR_SIZE;
+    esp_err_t err = bootloader_flash_read(desc_offset, &descriptor, APP_CRC_DESCRIPTOR_SIZE, false);
+    if (err != ESP_OK) {
+        emit_evt("APP_CRC_FAIL");
+        set_led((led_rgb_t){20, 0, 0});
+        delay_ms(UPDATE_VERIFY_FAIL_MS);
+        return false;
+    }
+
+    // Validate stored image_size is within sane bounds
+    const uint32_t max_image_size = partition_size - APP_CRC_DESCRIPTOR_SIZE;
+    if (descriptor.image_size == 0U || descriptor.image_size > max_image_size) {
+        emit_evt("APP_CRC_FAIL");
+        set_led((led_rgb_t){20, 0, 0});
+        delay_ms(UPDATE_VERIFY_FAIL_MS);
+        return false;
+    }
+
+    // Compute CRC-32/ISO-HDLC over only the actual app image bytes
+    uint32_t observed_crc = compute_flash_crc32(flash_offset, descriptor.image_size);
 
 #ifdef CONFIG_BOOTLOADER_TEST_CRC_FORCE_FAIL
-    expected_crc ^= UINT32_MAX;
+    // Corrupt observed value to force a mismatch — validation testing only
+    observed_crc ^= UINT32_MAX;
 #endif
 
-    if (observed_crc != expected_crc) {
+    if (observed_crc != descriptor.crc32) {
         emit_evt("APP_CRC_FAIL");
         set_led((led_rgb_t){20, 0, 0});
         delay_ms(UPDATE_VERIFY_FAIL_MS);

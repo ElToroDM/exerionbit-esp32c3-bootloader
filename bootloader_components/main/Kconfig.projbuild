@@ -1,0 +1,13 @@
+menu "Bootloader test options"
+
+config BOOTLOADER_TEST_CRC_FORCE_FAIL
+    bool "Force app CRC check to fail (validation testing only)"
+    default n
+    help
+        When enabled, the observed CRC is XOR-inverted before comparison,
+        guaranteeing a mismatch regardless of image content.
+        Use this to verify that BL_EVT:APP_CRC_FAIL fires and the boot
+        path enters recovery hold without handoff.
+        Must be disabled for all production and public release builds.
+
+endmenu
