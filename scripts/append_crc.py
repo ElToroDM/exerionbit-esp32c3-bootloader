@@ -50,20 +50,43 @@ def compute_crc32(data: bytes) -> int:
     return zlib.crc32(data) & 0xFFFFFFFF
 
 
-def build_partition_image(app_image: bytes, partition_size: int) -> bytes:
+def build_partition_image(app_image: bytes, partition_size: int, corrupt_crc: bool = False) -> bytes:
     """
     Assemble the full partition image:
       [app_image][0xFF padding][image_size LE32][crc32 LE32]
+    
+    If app_image is already partition-sized, assume it's a full partition and handle CRC corruption in-place.
     """
-    max_payload = partition_size - DESCRIPTOR_SIZE
-    if len(app_image) > max_payload:
-        raise ValueError(
-            f"App image ({len(app_image)} B) exceeds partition payload area ({max_payload} B)"
-        )
+    app_size = len(app_image)
+    
+    # If input is already partition-sized, assume it's a full partition image and rewrite descriptor in-place.
+    if app_size == partition_size:
+        partition = bytearray(app_image)
+        image_size = int.from_bytes(partition[partition_size - DESCRIPTOR_SIZE:partition_size - 4], "little")
 
+        # Fallback for legacy/uninitialized descriptor: detect payload by trimming 0xFF tail before descriptor region.
+        if image_size == 0 or image_size > (partition_size - DESCRIPTOR_SIZE):
+            payload = bytes(partition[:partition_size - DESCRIPTOR_SIZE])
+            image_size = len(payload.rstrip(bytes([ERASE_VALUE])))
+
+        payload = bytes(partition[:image_size])
+        crc = compute_crc32(payload)
+        if corrupt_crc:
+            crc ^= 0xFFFFFFFF
+
+        partition[partition_size - DESCRIPTOR_SIZE:partition_size] = struct.pack("<II", image_size, crc)
+        return bytes(partition)
+    elif app_size > partition_size - DESCRIPTOR_SIZE:
+        raise ValueError(
+            f"App image ({app_size} B) exceeds partition payload area ({partition_size - DESCRIPTOR_SIZE} B)"
+        )
+    
+    # Build partition from app image
     crc = compute_crc32(app_image)
-    image_size = len(app_image)
-    padding = bytes([ERASE_VALUE]) * (max_payload - image_size)
+    if corrupt_crc:
+        crc ^= 0xFFFFFFFF
+    image_size = app_size
+    padding = bytes([ERASE_VALUE]) * (partition_size - DESCRIPTOR_SIZE - image_size)
     descriptor = struct.pack("<II", image_size, crc)
     return app_image + padding + descriptor
 
@@ -86,22 +109,37 @@ def main() -> None:
     parser.add_argument(
         "--out-image",
         type=Path,
-        default=Path("build/factory_crc_partition.bin"),
-        help="Output full partition image (default: build/factory_crc_partition.bin)",
+        default=None,
+        help="Output full partition image (default: input file when --bad-crc, else build/factory_crc_partition.bin)",
+    )
+    parser.add_argument(
+        "--bad-crc",
+        action="store_true",
+        help="Corrupt the CRC for testing failure path (flips all bits)",
     )
 
     args = parser.parse_args()
 
+    # Default output: always build/factory_crc_partition.bin.
+    # Never overwrite the app binary — that confuses ninja's dependency tracking.
+    if args.out_image is None:
+        args.out_image = Path("build/factory_crc_partition.bin")
+
     app_image = args.input.read_bytes()
     crc = compute_crc32(app_image)
-    partition = build_partition_image(app_image, args.partition_size)
+    partition = build_partition_image(app_image, args.partition_size, args.bad_crc)
 
     args.out_image.parent.mkdir(parents=True, exist_ok=True)
     args.out_image.write_bytes(partition)
 
+    crc_display = crc
+    if args.bad_crc:
+        crc_display ^= 0xFFFFFFFF
+        print(f"WARNING: CRC corrupted for testing (actual CRC: 0x{crc:08X})")
+
     print(f"Input app image    : {args.input}")
     print(f"Input image size   : {len(app_image)} bytes (0x{len(app_image):X})")
-    print(f"CRC-32 (ISO-HDLC)  : 0x{crc:08X}")
+    print(f"CRC-32 (ISO-HDLC)  : 0x{crc_display:08X}")
     print(f"Partition size     : 0x{args.partition_size:08X} ({args.partition_size} bytes)")
     print(f"Descriptor offset  : 0x{(args.partition_size - DESCRIPTOR_SIZE):08X}")
     print(f"Output partition   : {args.out_image} ({len(partition)} bytes)")

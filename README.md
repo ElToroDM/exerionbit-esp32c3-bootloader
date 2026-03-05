@@ -24,14 +24,13 @@ Minimal ESP-IDF bootloader for the Waveshare ESP32-C3 Zero board.
 2. Capture logs with `scripts/watch_serial.py`.
 3. Validate token sequence with the validation profile (`VALIDATION_PROFILE.md`).
 4. Optional: hold `GPIO9` at boot to enter selector and verify mode tokens (`MODE_SELECT_ARMED`, `MODE_SELECTED`, `MODE_EXECUTE`).
+5. Optional: test CRC validation via `SETUP.md` (CRC OK path and CRC failure path with recovery).
 
 ## Known limits
 
 - Live validation requires physical ESP32-C3 hardware access
 - Native USB re-enumeration can hide very early boot lines without watcher tooling
 - Public repository documents baseline behavior, not full production hardening
-- Update receive/write protocol is not implemented yet (update mode is currently a decision/context baseline)
-- CRC check is currently descriptor-level baseline (partition metadata), not full app payload verification
 
 ## Contact
 

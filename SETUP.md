@@ -100,6 +100,40 @@ This document collects environment, installation, monitoring, and troubleshootin
 - VS Code (workspace) may include `idf.pythonBinPath`; ensure it points to the IDF Python env used by your IDF install.
 - `sdkconfig` / `sdkconfig.defaults` indicate IDF init/version (`CONFIG_IDF_INIT_VERSION:"6.1.0"`).
 
+## Testing CRC functionality
+
+The bootloader validates app image CRC at boot.
+The ESP-IDF extension **Build** button regenerates a CRC-OK app image in place, so extension **Flash** uses a valid descriptor by default.
+
+**Normal flash (CRC OK):**
+1. Build, Flash and Monitor: use ESP-IDF extension "Build, Flash and Monitor" button
+2. Expect: `BL_EVT:APP_CRC_OK` → `BL_EVT:HANDOFF_APP` → `APP_EVT:START`
+
+**Testing CRC failure (image corruption):**
+1. Build: use ESP-IDF extension "Build" button
+2. Corrupt CRC in the built image:
+   ```powershell
+   python scripts/append_crc.py --bad-crc build/waveshare_esp32c3_zero_bootloader.bin --out-image build/waveshare_esp32c3_zero_bootloader.bin
+   ```
+3. Flash: use ESP-IDF extension "Flash" button
+4. Monitor: use ESP-IDF extension "Monitor" button
+4. Expect: `BL_EVT:APP_CRC_FAIL` → recovery mode (heartbeat every 5s)
+
+To return to CRC OK: rebuild with extension Build button (automatically regenerates CRC OK image).
+
+Manual equivalent (PowerShell):
+```powershell
+# CRC OK
+python scripts/append_crc.py build/waveshare_esp32c3_zero_bootloader.bin --out-image build/waveshare_esp32c3_zero_bootloader.bin
+python -m esptool --chip esp32c3 --port COM4 --baud 460800 write-flash 0x10000 build/waveshare_esp32c3_zero_bootloader.bin
+
+# CRC FAIL
+python scripts/append_crc.py --bad-crc build/waveshare_esp32c3_zero_bootloader.bin --out-image build/waveshare_esp32c3_zero_bootloader.bin
+python -m esptool --chip esp32c3 --port COM4 --baud 460800 write-flash 0x10000 build/waveshare_esp32c3_zero_bootloader.bin
+```
+
+Use `scripts/watch_serial.py --port COM4` for complete boot capture.
+
 ## Troubleshooting checklist
 1. `idf.py --version` shows ESP‑IDF v6.1 (or your configured version).
 2. `python -c "import serial"` succeeds (pyserial installed).

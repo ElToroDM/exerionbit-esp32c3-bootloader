@@ -6,13 +6,15 @@ This public repository provides a minimal, reproducible bootloader baseline for 
 
 Included in scope:
 - deterministic boot decision behavior
-- baseline integrity signaling and validation flow
+- baseline integrity signaling and validation flow (CRC-32/ISO-HDLC app payload validation)
 - reproducible evidence artifacts
+- CRC validation for app image integrity checks
 
 Out of scope:
-- advanced production hardening internals
+- advanced production hardening internals (e.g., key provisioning, tamper response)
 - full key lifecycle architecture
 - anti-tamper implementation details
+- authenticated image signing or encryption (baseline uses CRC checksums only)
 
 ## Reporting a Vulnerability
 
