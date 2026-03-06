@@ -53,12 +53,26 @@ To flash the board:
 
 ## Quick Start
 
-1. Install ESP‑IDF v6.1 and the VS Code ESP‑IDF extension (recommended).
-2. Open this folder in VS Code and point the extension to `C:\esp\esp-idf`.
-3. Use the ESP‑IDF extension: Build → Flash → Monitor.
-4. Or in PowerShell (example): `set IDF_PATH=C:\esp\esp-idf ; idf.py -p COM4 flash monitor`
-5. To capture full boot logs (ESP32‑C3 USB re‑enumerates): `python scripts/watch_serial.py --port COM4`
-6. See `SETUP.md` for environment setup, toolchain PATH, PowerShell alias, and troubleshooting.
+### Automated setup (recommended)
+
+1. Install ESP‑IDF v6.1 (or use VS Code ESP‑IDF extension).
+2. See [SETUP.md](SETUP.md) for one-time PowerShell profile setup that configures all paths, tools, and convenience wrappers.
+3. After setup, use any of:
+   - **VS Code**: ESP‑IDF extension → Build → Flash → Monitor
+    - **PowerShell**: `idf build` / `idf flash` / `idf monitor`
+    - Optional port override: `idf -p <PORT> flash` / `idf -p <PORT> monitor`
+
+
+### Manual setup (if not using profile)
+
+In PowerShell:
+```powershell
+$env:IDF_PATH = 'C:\esp\esp-idf'
+$idfPythonDir = "$env:USERPROFILE\.espressif\python_env\idf6.1_py3.11_env\Scripts"
+& "$idfPythonDir\python.exe" C:\esp\esp-idf\tools\idf.py build
+```
+
+See [SETUP.md](SETUP.md) for full environment details, toolchain paths, and troubleshooting.
 
 ---
 
@@ -93,7 +107,16 @@ Recovery hold path:
 
 ## USB serial behavior
 
-ESP32-C3 native USB CDC disconnects during reset. Early ROM and bootloader output is invisible to `idf.py monitor` until the app reinitializes USB. Use `scripts/watch_serial.py` for complete boot sequence capture with automatic reconnection. See [SETUP.md](SETUP.md) for full setup, watcher flags, and troubleshooting.
+ESP32-C3 native USB CDC disconnects during reset. Early ROM and bootloader output is invisible to `idf monitor` until the app reinitializes USB.
+
+For early complete boot capture, use `idf monitor` (default tool). For long-running logging with timestamps and file output, use `python scripts/watch_serial.py` (note: starts logging after initial bootloader events already pass).
+
+Example:
+```powershell
+python scripts/watch_serial.py --inactivity 10
+```
+
+See [SETUP.md](SETUP.md) for full setup, watcher flags, and troubleshooting.
 
 ---
 

@@ -7,19 +7,32 @@ from datetime import datetime
 
 try:
     import serial
+    from serial.tools import list_ports
 except Exception as e:
     print("Missing dependency 'pyserial'. Install with: python -m pip install pyserial")
     raise
 
 parser = argparse.ArgumentParser(description='Watch serial port and detect stalls')
-parser.add_argument('--port', default='COM4')
+parser.add_argument('--port', default=None, help='Serial port (optional; auto-detects first available port if omitted)')
 parser.add_argument('--baud', type=int, default=115200)
 parser.add_argument('--inactivity', type=float, default=3.0, help='seconds of no new lines to consider inactivity')
 parser.add_argument('--same-time', type=float, default=3.0, help='seconds the same line persists to consider a stall')
 parser.add_argument('--log', default='build/bootlog.txt')
 args = parser.parse_args()
 
-port = args.port
+def resolve_port(cli_port: str | None) -> str:
+    if cli_port:
+        return cli_port
+    ports = list(list_ports.comports())
+    if not ports:
+        print("No serial ports detected. Connect a device or pass --port <PORT>.")
+        sys.exit(2)
+    selected = ports[0].device
+    print(f"Auto-detected serial port: {selected}")
+    return selected
+
+
+port = resolve_port(args.port)
 baud = args.baud
 inactive_thresh = args.inactivity
 same_thresh = args.same_time

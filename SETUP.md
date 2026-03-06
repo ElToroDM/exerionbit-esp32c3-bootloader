@@ -7,10 +7,40 @@ This document collects environment, installation, monitoring, and troubleshootin
 - Boot sequence contract: `BOOT_SEQUENCE.md`
 - Validation execution profile: `VALIDATION_PROFILE.md`
 
+## Quick verification (after environment setup)
+
+Run these in PowerShell to confirm all dependencies are ready:
+```powershell
+# Test 1: ESP-IDF (both 'idf' and 'idf.py' work after profile setup)
+idf --version             # Should print "ESP-IDF v6.1-dev..."
+
+# Test 2: cmake and ninja (required for idf build)
+cmake --version           # Should print "cmake version 3.30.2"
+ninja --version           # Should print "1.12.1"
+
+# Test 3: RISC-V addr2line
+riscv32-esp-elf-addr2line --version    # Should print "GNU addr2line..."
+
+# Test 4: Python and pyserial
+python -c "import serial; print(f'pyserial {serial.__version__}')"
+
+# Test 5: IDF_PATH
+$env:IDF_PATH             # Should print "C:\esp\esp-idf"
+```
+
+If all tests pass, you're ready to build. Start with `idf build` or `idf.py build`.
+
+**If any command fails:**
+- Verify your PowerShell profile was saved and reloaded
+- Run `. $PROFILE` (dot-source) to reload environment — `&` does not import functions into the current session
+- Restart PowerShell and try again
+
 ## Validation entry point
 
-- Live capture: `python scripts/watch_serial.py --port COM4 --inactivity 10`
-- Offline/token validation: `python scripts/validate_bootlog.py --log build/bootlog.txt`
+- **Live monitoring**: `idf monitor` (or `idf.py monitor`)
+- **Long-duration logging** (demo mode): `python scripts/watch_serial.py --inactivity 10` (logs to `build/bootlog.txt`)
+- **Offline validation** (if available): `python scripts/validate_bootlog.py --log build/bootlog.txt`
+- Optional port override for any command: `-p <PORT>` or `--port <PORT>`
 
 ## Required software
 - ESP‑IDF: **v6.1** (tested)
@@ -25,51 +55,128 @@ This document collects environment, installation, monitoring, and troubleshootin
 - IDF tools path: `IDF_TOOLS_PATH = C:\Users\<User>\.espressif`
 
 ## Set up environment (PowerShell)
+
+### For this workstation (recommended quick setup)
+
+1. **Install pyserial** (one-time):
+   ```powershell
+   $pythonEnv = "$env:USERPROFILE\.espressif\python_env\idf6.1_py3.11_env\Scripts\python.exe"
+   & $pythonEnv -m pip install pyserial
+   ```
+
+2. **Temporary session** (current PowerShell window only):
+   ```powershell
+   $env:IDF_PATH = 'C:\esp\esp-idf'
+   $env:PATH = "$env:USERPROFILE\.espressif\tools\riscv32-esp-elf\esp-15.2.0_20251204\riscv32-esp-elf\bin;$env:PATH"
+   
+   # Create convenient alias
+   function idf { & $env:USERPROFILE\.espressif\python_env\idf6.1_py3.11_env\Scripts\python.exe C:\esp\esp-idf\tools\idf.py @args }
+   ```
+  Then: `idf build` / `idf flash` / `idf monitor`
+
+3. **Permanent setup** (add to PowerShell profile):
+   
+   Run `notepad $PROFILE` and add:
+   ```powershell
+   # ESP-IDF environment configuration
+
+   # IDF base path
+   $env:IDF_PATH = 'C:\esp\esp-idf'
+
+   # Prefer Python from the ESP-IDF virtual environment
+   $idfPythonDir = "$env:USERPROFILE\.espressif\python_env\idf6.1_py3.11_env\Scripts"
+   $env:PATH = "$idfPythonDir;$env:PATH"
+   $env:IDF_PYTHON_ENV_PATH = "$env:USERPROFILE\.espressif\python_env\idf6.1_py3.11_env"
+
+   # Add RISC-V toolchain, cmake and ninja to PATH
+   $riscvBin = "$env:USERPROFILE\.espressif\tools\riscv32-esp-elf\esp-15.2.0_20251204\riscv32-esp-elf\bin"
+   $cmakeBin = "$env:USERPROFILE\.espressif\tools\cmake\3.30.2\bin"
+   $ninjaBin = "$env:USERPROFILE\.espressif\tools\ninja\1.12.1"
+   $env:PATH = "$riscvBin;$cmakeBin;$ninjaBin;$env:PATH"
+
+   # Convenience wrappers — both 'idf' and 'idf.py' are supported
+   function idf    { & "$idfPythonDir\python.exe" "C:\esp\esp-idf\tools\idf.py" @args }
+   function idf.py { & "$idfPythonDir\python.exe" "C:\esp\esp-idf\tools\idf.py" @args }
+   ```
+   Then reload: `. $PROFILE` (dot-source, or restart PowerShell)
+
+### Dot-sourcing vs. running the profile
+
+When you edit your PowerShell profile, prefer *dot-sourcing* to load functions and exported variables into the current session. Running the profile with `& $PROFILE` executes it in a child scope which may not import functions into your interactive session.
+
+Use this to apply the profile changes immediately in the current shell:
+
+```powershell
+. $PROFILE    # dot-source: imports functions and env vars into this session
+```
+
+> **Why dot-source?** Running `& $PROFILE` executes the script in a child scope — environment variables propagate, but function definitions do not. Dot-sourcing (`. $PROFILE`) runs the script in the current scope so `idf` and `idf.py` are available immediately.
+
+Quick checks after dot-sourcing:
+
+```powershell
+Get-Command idf -CommandType Function   # should list the 'idf' function
+idf --version                           # should print ESP-IDF version (no WARNING)
+cmake --version                         # should print cmake version 3.30.2
+ninja --version                         # should print 1.12.1
+python -c "import serial; print(serial.__version__)"  # should print 3.5
+riscv32-esp-elf-addr2line --version     # should print GNU addr2line
+```
+
+If `Get-Command idf` returns nothing, run `. $PROFILE` (dot-source) and try again.
+
+### For other workstations (generic setup)
+
 1. Run ESP‑IDF install/setup per Espressif docs (or use VS Code extension installer).
 2. Source the ESP‑IDF environment:
    - Short (temporary): `$env:IDF_PATH = 'C:\esp\esp-idf'`
    - Permanent (PowerShell profile): add the `export.ps1` invocation from ESP‑IDF or set `IDF_PATH`.
-3. Example alias (add to your PowerShell profile):
-   ```powershell
-   function idf { & C:\Users\Admin\.espressif\python_env\idf6.1_py3.11_env\Scripts\python.exe C:\esp\esp-idf\tools\idf.py $args }
-   $env:IDF_PATH = "C:\esp\esp-idf"
-   ```
-   Then: `idf build` / `idf -p COM4 flash` / `idf -p COM4 monitor`
 
 ## Common commands
 - Build: `idf.py build`
-- Flash (full): `idf.py -p COM4 flash`
-- App fast‑flash: `idf.py -p COM4 app-flash`
-- Bootloader only: `idf.py bootloader` / `idf.py -p COM4 bootloader-flash`
-- Erase flash: `idf.py -p COM4 erase-flash`
-- Backup flash: `python -m esptool --chip esp32c3 --port COM4 read_flash 0x0 0x400000 backup.bin`
+- Flash (full): `idf.py flash`
+- App fast‑flash: `idf.py app-flash`
+- Bootloader only: `idf.py bootloader` / `idf.py bootloader-flash`
+- Erase flash: `idf.py erase-flash`
+- Backup flash (explicit port required by esptool): `python -m esptool --chip esp32c3 --port <PORT> read_flash 0x0 0x400000 backup.bin`
+- Optional port override for IDF commands: append `-p <PORT>`
 
 ## Monitor tips & capturing the full boot
-- `idf.py -p COM4 monitor` is convenient and provides symbol/panic decoding.
-- ESP32‑C3 USB CDC disconnects during reset → very early boot messages may be missed while USB re‑enumerates.
-- Bootloader uses a 1.0s reconnect window to allow USB to re-enumerate reliably in demos (see bootloader log buffer).
+
+**For complete first-boot capture** (ROM bootloader, all `BL_EVT:*`, app startup):
+- Use `idf.py monitor` or `idf monitor` — shows everything from ROM, provides symbol/panic decoding.
+- If needed, force a port: `idf.py -p <PORT> monitor`
+
+**Known behavior** (USB re-enumeration):
+- ESP32‑C3 USB CDC disconnects during reset.
+- Early ROM bootloader output may briefly be invisible to the monitor while USB re‑enumerates.
+- Bootloader intentionally flushes buffered logs after ~1.0s to allow USB to re-enumerate and stabilize before late-stage logs.
+- In practice, `idf monitor` captures the complete sequence once USB reconnects (usually within 1-2 seconds).
 
 
-### Use the included serial watcher (recommended to capture everything)
+### Use the included serial watcher (for long-running logging)
+
+`watch_serial.py` is useful for long-duration monitoring, timestamped logging to file, and handling USB reconnections. However, it does **not** capture very early bootloader output (ROM bootloader logs, initial `BL_EVT:*` events); `idf monitor` shows these. Use `idf monitor` for complete first-boot capture; use `watch_serial.py` for demo-mode logging, validation loops, or when you need timestamped file output.
+
 - Dependency: `pyserial`
 - Example:
   ```powershell
   $env:IDF_PATH='C:\esp\esp-idf'
-  C:\Users\<User>\.espressif\python_env\idf6.1_py3.11_env\Scripts\python.exe scripts/watch_serial.py --port COM4 --inactivity 10
+  C:\Users\<User>\.espressif\python_env\idf6.1_py3.11_env\Scripts\python.exe scripts/watch_serial.py --inactivity 10
   ```
 - What it does:
   - Reconnects after USB re‑enumeration (useful when the device is reset)
   - Adds monotonic line numbers and timestamps
   - Logs to `build/bootlog.txt`
 - CLI flags:
-  - `--port` (default `COM4`)
+  - `--port` (optional; use when auto-detection is not enough)
   - `--baud` (default `115200`)
   - `--inactivity` seconds (default `3.0`)
   - `--same-time` stall detection (default `3.0`)
   - `--log` (default `build/bootlog.txt`)
 
 #### Smoke test — verify HEARTBEAT
-- Run the watcher, press the device reset button, wait for the watcher to show `Connected to COM4` and then check the log for `APP_EVT:HEARTBEAT`.
+- Run the watcher, press the device reset button, wait for the watcher to show `Connected to <port>` and then check the log for `APP_EVT:HEARTBEAT`.
 - PowerShell quick check:
   ```powershell
   Select-String -Path .\build\bootlog.txt -Pattern 'APP_EVT:HEARTBEAT'
@@ -125,14 +232,14 @@ Manual equivalent (PowerShell):
 ```powershell
 # CRC OK
 python scripts/append_crc.py build/waveshare_esp32c3_zero_bootloader.bin --out-image build/waveshare_esp32c3_zero_bootloader.bin
-python -m esptool --chip esp32c3 --port COM4 --baud 460800 write-flash 0x10000 build/waveshare_esp32c3_zero_bootloader.bin
+python -m esptool --chip esp32c3 --port <PORT> --baud 460800 write-flash 0x10000 build/waveshare_esp32c3_zero_bootloader.bin
 
 # CRC FAIL
 python scripts/append_crc.py --bad-crc build/waveshare_esp32c3_zero_bootloader.bin --out-image build/waveshare_esp32c3_zero_bootloader.bin
-python -m esptool --chip esp32c3 --port COM4 --baud 460800 write-flash 0x10000 build/waveshare_esp32c3_zero_bootloader.bin
+python -m esptool --chip esp32c3 --port <PORT> --baud 460800 write-flash 0x10000 build/waveshare_esp32c3_zero_bootloader.bin
 ```
 
-Use `scripts/watch_serial.py --port COM4` for complete boot capture.
+Use `idf monitor` for complete boot capture, or `scripts/watch_serial.py --inactivity 10` for long-duration timestamped logging.
 
 ## Troubleshooting checklist
 1. `idf.py --version` shows ESP‑IDF v6.1 (or your configured version).
