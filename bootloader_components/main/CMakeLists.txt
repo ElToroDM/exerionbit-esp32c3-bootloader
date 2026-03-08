@@ -2,6 +2,7 @@
 idf_component_register(
     SRCS
         "main.c"
+        "update_mode.c"
         "ws2812.c"
         "logging.c"
     INCLUDE_DIRS

@@ -1,7 +1,7 @@
 # Known Limits — Waveshare ESP32-C3 Zero Custom Bootloader
 
-**Version:** v0.1  
-**Date:** 2026-02-20
+**Version:** v0.2  
+**Date:** 2026-03-08
 
 ---
 
@@ -34,19 +34,32 @@
 
 ## OTA and update protocol
 
-- No UART update receive/write protocol is implemented in this baseline.
-- Update mode currently covers deterministic mode selection, decision tokens, and boot context signaling.
-- The partition table (`partitions.csv`) includes only NVS and factory app partitions.
+- UART update receive/write protocol is implemented as a minimal deterministic baseline in update mode.
+- Transport is intentionally simple: ASCII frame header (`[LEN:OFFSET:CRC16]`) + binary payload.
+- Current implementation is host-driven and single-session only (no resume).
+- The partition table (`partitions.csv`) includes only NVS and factory app partitions (no OTA slot scheme).
 
 ## Integrity check scope
 
-- Current CRC check is descriptor-level baseline (`factory.offset` + `factory.size`).
-- Full app payload CRC verification is not implemented yet.
+- Full app payload CRC verification is implemented with descriptor-based metadata (`image_size` + `crc32` at partition tail).
+- Chunk transfer uses CRC16 per frame for transport corruption detection.
+- This remains an integrity baseline only; authenticity and anti-rollback are out of scope.
 
 ## Power-loss and partial-transfer behavior
 
-- Because update receive/write is not implemented yet, no transactional resume/recovery policy exists for interrupted transfers.
-- Future update protocol work must define deterministic behavior for partial transfer and reset/power-loss scenarios before being promoted to production-like baseline claims.
+- Interrupted transfer handling is fail-safe but minimal:
+  - Missing chunk bytes eventually trigger `CHUNK_FAIL` after timeout.
+  - Repeated failures (10 consecutive) abort update mode to recovery.
+- No transactional resume exists across reset/power-loss; host must restart transfer from offset 0.
+- No dual-bank rollback path exists in public baseline.
+
+## Protocol and operability constraints
+
+- Maximum chunk size is fixed to 1024 bytes in bootloader.
+- Header and payload offsets must be 4-byte aligned.
+- Per-chunk timeout is 120 seconds to tolerate reconnect races; this increases worst-case failure detection latency.
+- Operator must intentionally select UPDATE mode via single-button selector (GPIO9).
+- Failure-case validation requires physical access because UPDATE mode entry is hardware-driven.
 
 ## Board-specific notes
 

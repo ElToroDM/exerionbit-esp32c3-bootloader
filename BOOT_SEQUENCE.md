@@ -53,6 +53,7 @@ Implemented state tokens:
 - `BL_EVT:HW_READY`
 - `BL_EVT:PARTITION_TABLE_OK`
 - `BL_EVT:DECISION_NORMAL`
+- `BL_EVT:DECISION_UPDATE`
 - `BL_EVT:DECISION_RECOVERY`
 - `BL_EVT:APP_CRC_CHECK`
 - `BL_EVT:APP_CRC_OK`
@@ -64,6 +65,13 @@ Implemented state tokens:
 - `BL_EVT:MODE_SELECT_ARMED`
 - `BL_EVT:MODE_SELECTED:<mode>`
 - `BL_EVT:MODE_EXECUTE:<mode>`
+- `BL_EVT:READY_FOR_UPDATE`
+- `BL_EVT:READY_FOR_CHUNK`
+- `BL_EVT:CHUNK_OK:<offset>`
+- `BL_EVT:CHUNK_FAIL:<offset>`
+- `BL_EVT:UPDATE_SESSION_END`
+- `BL_EVT:UPDATE_START_FAIL`
+- `BL_EVT:UPDATE_SETUP_FAIL`
 
 Additional diagnostic tokens:
 - `BL_EVT:RECOVERY_HEARTBEAT:<n>`
@@ -86,6 +94,11 @@ Normal path:
 
 Recovery/update/fatal:
 - `DECISION_RECOVERY`: MAGENTA bright steady `(20,0,20)`
+- `DECISION_UPDATE`: AMBER steady `(16,10,0)` before update receive loop starts
+- `READY_FOR_UPDATE`/`READY_FOR_CHUNK`: AMBER blink `(16,10,0 <-> 4,2,0)` at `250ms` cadence while waiting on UART input
+- `CHUNK_OK:<offset>`: GREEN pulse `(0,20,0)` for `60ms`
+- `CHUNK_FAIL:<offset>`: RED pulse `(20,0,0)` for `80ms`
+- `UPDATE_START_FAIL`: RED pulse `(20,0,0)` for `120ms`
 - `APP_CRC_CHECK`: YELLOW pulse `(16,10,0 ↔ 8,5,0 @ 2Hz)` — emitted in all paths
 - `APP_CRC_OK`: GREEN brief `(0,20,0)` for `200ms` — emitted in all paths
 - `APP_CRC_FAIL`: RED brief `(20,0,0)` for `300ms` — emitted in all paths
@@ -174,6 +187,31 @@ On verify fail:
 Forced CRC mismatch for validation is enabled via `CONFIG_BOOTLOADER_TEST_CRC_FORCE_FAIL`
 (build/Kconfig option). This corrupts the observed CRC before comparison without touching
 flash content. Not exposed via any public GPIO.
+
+## 6.1 UART update protocol baseline (v0.2)
+
+Implemented transfer contract (ASCII header + binary payload):
+
+1. Device emits `BL_EVT:DECISION_UPDATE` and `BL_EVT:READY_FOR_UPDATE`
+2. Host sends `START_UPDATE\n`
+3. Device emits `BL_EVT:READY_FOR_CHUNK`
+4. Host sends one frame:
+  - Header line: `[LEN:OFFSET:CRC16]\n` (decimal fields)
+  - Binary payload: exactly `LEN` bytes
+5. Device validates header, bounds, payload timeout, and frame CRC16:
+  - success -> `BL_EVT:CHUNK_OK:<offset>`
+  - failure -> `BL_EVT:CHUNK_FAIL:<offset>` (or `:0` for malformed header/timeout)
+6. Steps 3-5 repeat until host sends `END_UPDATE\n`
+7. Device emits `BL_EVT:UPDATE_SESSION_END`, runs full app CRC validation, then either:
+  - `BL_EVT:APP_CRC_OK` -> normal `LOAD_APP`/`HANDOFF`
+  - `BL_EVT:APP_CRC_FAIL` -> recovery hold path
+
+Current baseline limits:
+- `UPDATE_CHUNK_MAX_SIZE = 1024` bytes
+- `UPDATE_CHUNK_TIMEOUT_MS = 120000` (per header/payload wait)
+- `UPDATE_MAX_ERRORS = 10` consecutive failures before update mode aborts to recovery
+- Factory partition sectors are erased once per sector per session (tracked bitmap)
+- `LEN` and `OFFSET` must be 4-byte aligned and fully inside the factory partition
 
 ## 7. Fatal behavior
 

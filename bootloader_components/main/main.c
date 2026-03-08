@@ -13,6 +13,7 @@
 #include "soc/gpio_reg.h"
 #include "soc/rtc_cntl_reg.h"
 #include "hal/wdt_hal.h"
+#include "update_mode.h"
 #include "ws2812.h"
 
 #define TOTAL_VISUAL_MS            4000U
@@ -91,6 +92,7 @@ static const led_rgb_t s_mode_ring_colors[] = {
 #define MODE_RING_SIZE (sizeof(s_mode_ring) / sizeof(s_mode_ring[0]))
 
 static void feed_watchdog(void);
+static bool run_app_crc_check(const bootloader_state_t *boot_state);
 
 static void delay_ms(uint32_t delay_ms_value)
 {
@@ -140,6 +142,11 @@ static void publish_boot_context(uint32_t context)
 static void set_led(led_rgb_t color)
 {
     ws2812_set_rgb(color.r, color.g, color.b);
+}
+
+static void set_led_rgb(uint8_t r, uint8_t g, uint8_t b)
+{
+    ws2812_set_rgb(r, g, b);
 }
 
 static void configure_input_gpio(int gpio)
@@ -396,16 +403,27 @@ void __attribute__((noreturn)) call_start_cpu0(void)
     }
 
     if (selected_mode == BOOT_MODE_UPDATE) {
-        emit_evt("DECISION_UPDATE");
+        const update_mode_hooks_t update_hooks = {
+            .delay_ms = delay_ms,
+            .emit_evt = emit_evt,
+            .emit_evt_with_value = emit_evt_with_value,
+            .set_led_rgb = set_led_rgb,
+            .run_app_crc_check = run_app_crc_check,
+        };
+        set_led(s_normal_phases[3].color);
+        delay_ms(phase_duration_ms(s_normal_phases[3].visual_percent));
+        if (!handle_update_mode(&boot_state, &update_hooks)) {
+            enter_recovery_loop();
+        }
     } else {
         emit_evt(s_normal_phases[3].token);  // DECISION_NORMAL
-    }
-    set_led(s_normal_phases[3].color);
-    delay_ms(phase_duration_ms(s_normal_phases[3].visual_percent));
+        set_led(s_normal_phases[3].color);
+        delay_ms(phase_duration_ms(s_normal_phases[3].visual_percent));
 
-    // CRC check runs in all non-recovery paths
-    if (!run_app_crc_check(&boot_state)) {
-        enter_recovery_loop();
+        // CRC check runs in all non-recovery paths.
+        if (!run_app_crc_check(&boot_state)) {
+            enter_recovery_loop();
+        }
     }
 
     if (selected_mode == BOOT_MODE_UPDATE) {
