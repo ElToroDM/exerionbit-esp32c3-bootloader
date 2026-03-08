@@ -34,7 +34,7 @@ flash*args*
 
 ## IDEs & Editors
 .vscode/
-!.vscode/c_cpp_properties.json
+!.vscode/c_cpp_properties.template.json
 .idea/
 *.iml
 *.code-workspace
