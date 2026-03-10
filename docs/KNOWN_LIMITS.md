@@ -17,6 +17,9 @@
 - The included `scripts/watch_serial.py` watcher mitigates this by reconnecting automatically
   and logging to `build/bootlog.txt`, but a brief window of output immediately at power-on
   may still be missed.
+- ESP-IDF integrated monitor may not show local keyboard echo while still sending input bytes
+  to the target. Recovery command validation should rely on `BL_EVT:RECOVERY_CMD_*` and `BL_RSP:*`
+  responses rather than local input echo.
 
 ## Security scope
 
@@ -60,6 +63,8 @@
 - Per-chunk timeout is 120 seconds to tolerate reconnect races; this increases worst-case failure detection latency.
 - Operator must intentionally select UPDATE mode via single-button selector (GPIO9).
 - Failure-case validation requires physical access because UPDATE mode entry is hardware-driven.
+- Recovery idle liveness indication is LED-based in the current baseline (violet gentle blink),
+  not periodic serial heartbeat tokens.
 
 ## Board-specific notes
 

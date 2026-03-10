@@ -1,0 +1,14 @@
+v0.2 Size Snapshot
+Date: 2026-03-09
+Build command: idf.py build
+Board target: Waveshare ESP32-C3 Zero
+
+Observed outputs:
+- Bootloader binary size: 0x5a60 bytes
+- Bootloader free space: 0x25a0 bytes (29%)
+- Factory app image: 0x100000 bytes
+- Smallest app partition free space: 0 bytes (0%)
+
+Notes:
+- Size values were taken from the build output in the same workspace session.
+- The app partition fullness warning is expected with the current generated image artifact.

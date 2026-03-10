@@ -96,14 +96,21 @@ Selector/update path (`GPIO9`):
 - `BL_EVT:MODE_SELECT_ARMED`
 - `BL_EVT:MODE_SELECTED:UPDATE` (and mode cycling on short press)
 - `BL_EVT:MODE_EXECUTE:UPDATE` (long press)
-- `BL_EVT:DECISION_UPDATE` will be emitted when update mode is executed; the bootloader also publishes `BOOT_CTX_UPDATE` to the application.
-- Current baseline: update mode does not receive/write a new image yet; it exercises decision/context flow and then follows the existing CRC + handoff path.
+- `BL_EVT:DECISION_UPDATE` is emitted when update mode is executed.
+- Update protocol is implemented in the public baseline:
+    - host sends `START_UPDATE`
+    - device emits `READY_FOR_CHUNK`
+    - host sends `[LEN:OFFSET:CRC16]` + payload
+    - device emits `CHUNK_OK:<offset>` or `CHUNK_FAIL:<offset>`
+    - host sends `END_UPDATE`
+    - device runs app CRC gate and either hands off (`APP_CRC_OK`) or stays in recovery (`APP_CRC_FAIL`).
 
-Recovery hold path:
+Recovery command path:
 - `BL_EVT:DECISION_RECOVERY`
-- `BL_EVT:RECOVERY_HEARTBEAT:<n>` every 5s
 - no `BL_EVT:HANDOFF_APP` while recovery is active
-- Current baseline: no UART command parser is implemented in recovery hold yet.
+- UART command parser is implemented (`status`, `reboot`, `update`, `erase`, `boot`, `?`, `h`, `help`)
+- command responses are deterministic single-line `BL_RSP:*`
+- idle liveness is visual-only (gentle violet LED blink)
 
 ## USB serial behavior
 
@@ -155,7 +162,7 @@ Evidence policy:
 - **Custom bootloader**: `bootloader_components/main/main.c` contains our `call_start_cpu0()`
 - **Component override**: Our `main` component replaces ESP-IDF's default bootloader main
 - **USB handling**: Scripts handle ESP32-C3 USB reenumeration during reset
-- **Build verification**: Bootloader size `0x5160 bytes` (vs default `0x52a0`)
+- **Build verification**: Bootloader size snapshot tracked in `docs/evidence/v0.2/size_report.txt`
 
 ## Configuration Notes
 - Secure Boot: **DISABLED** (development mode)
@@ -165,8 +172,6 @@ Evidence policy:
 - Compiler Optimization: **Size (-Os)**
 
 ## Future Extensions
-- UART update protocol (receive/write/verify/apply flow)
-- Recovery console command parser (`status`, `reboot`, `enter_update`, `erase_app`, `boot`)
 - Full app payload CRC verification (beyond descriptor-level baseline)
 - OTA update support (add ota_0, ota_1, otadata partitions)
 - Image signature verification

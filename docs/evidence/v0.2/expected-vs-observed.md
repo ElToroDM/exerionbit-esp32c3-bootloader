@@ -1,6 +1,6 @@
 # Expected vs Observed - v0.2
 
-Scope: UART update baseline (happy path + failure-case validation set).
+Scope: normal boot, update protocol, recovery command console, and failure-case validation.
 
 ## Environment
 
@@ -9,58 +9,73 @@ Scope: UART update baseline (happy path + failure-case validation set).
 - Baud: 115200
 - Host Python: `C:\Users\Admin\.espressif\python_env\idf6.1_py3.11_env\Scripts\python.exe`
 
-## Happy path
+## Normal boot
 
-- Existing transcript: `docs/evidence/v0.2/logs/recovery_update.log`
+- Log: `docs/evidence/v0.2/logs/normal_boot.log`
+- Expected: `DECISION_NORMAL -> APP_CRC_CHECK -> APP_CRC_OK -> LOAD_APP -> HANDOFF -> HANDOFF_APP -> APP_EVT:START`
+- Observed: full expected sequence present, plus `APP_EVT:BOOTLOADER_HANDOFF_OK` and `APP_EVT:BOOT_CONTEXT:NORMAL`
 - Status: PASS
-- Confirmed sequence includes:
-  - `READY_FOR_UPDATE`
-  - `READY_FOR_CHUNK`
-  - `CHUNK_OK:*`
-  - `UPDATE_SESSION_END`
-  - `APP_CRC_OK`
-  - `LOAD_APP`
-  - `HANDOFF`
-  - `HANDOFF_APP`
-  - `APP_EVT:START`
+
+## Recovery command console
+
+- Log: `docs/evidence/v0.2/logs/recovery_commands.log`
+- Expected:
+  - Recovery entry token: `BL_EVT:DECISION_RECOVERY`
+  - Help aliases emit deterministic line: `BL_RSP:help:status,reboot,update,erase,boot,help`
+  - Unknown command emits deterministic line: `BL_RSP:error:unknown_command`
+  - `boot` command is CRC-gated and transitions to normal path on pass
+- Observed:
+  - `BL_EVT:DECISION_RECOVERY`
+  - `BL_EVT:RECOVERY_CMD_HELP` + deterministic help response
+  - `BL_EVT:RECOVERY_CMD_STATUS` + deterministic status response
+  - `BL_EVT:RECOVERY_CMD_UNKNOWN` + deterministic unknown response
+  - `BL_EVT:RECOVERY_CMD_BOOT` + `APP_CRC_OK` + `RECOVERY_CMD_BOOT_OK` + normal handoff tokens
+- Status: PASS
+
+## Update happy path
+
+- Log: `docs/evidence/v0.2/logs/recovery_update.log`
+- Expected: `READY_FOR_UPDATE -> READY_FOR_CHUNK -> CHUNK_OK:* -> UPDATE_SESSION_END -> APP_CRC_OK -> LOAD_APP -> HANDOFF`
+- Observed: full expected sequence present
+- Status: PASS
 
 ## Failure cases
 
 ### Corrupt chunk CRC16
 
-- Expected: `BL_EVT:CHUNK_FAIL:<offset>` without app handoff.
-- Attempt log: `docs/evidence/v0.2/logs/failure_corrupt_chunk.log`
-- Observed: `BL_EVT:READY_FOR_CHUNK` -> `BL_EVT:CHUNK_FAIL:0`
+- Log: `docs/evidence/v0.2/logs/failure_corrupt_chunk.log`
+- Expected: `BL_EVT:CHUNK_FAIL:<offset>` without app handoff
+- Observed: `BL_EVT:READY_FOR_CHUNK -> BL_EVT:CHUNK_FAIL:0`
 - Status: PASS
 
 ### Out-of-bounds offset
 
-- Expected: `BL_EVT:CHUNK_FAIL:<offset>` where `<offset>` is the invalid offset.
-- Attempt log: `docs/evidence/v0.2/logs/failure_oob_offset.log`
-- Observed: `BL_EVT:READY_FOR_CHUNK` -> `BL_EVT:CHUNK_FAIL:1048576`
+- Log: `docs/evidence/v0.2/logs/failure_oob_offset.log`
+- Expected: `BL_EVT:CHUNK_FAIL:<offset>` for invalid offset
+- Observed: `BL_EVT:READY_FOR_CHUNK -> BL_EVT:CHUNK_FAIL:1048576`
 - Status: PASS
 
 ### Invalid final CRC (tampered image)
 
-- Expected: `BL_EVT:UPDATE_SESSION_END` then `BL_EVT:APP_CRC_FAIL` and recovery hold.
-- Attempt log: `docs/evidence/v0.2/logs/failure_invalid_final_crc.log`
-- Observed: full transfer completed, followed by `BL_EVT:UPDATE_SESSION_END`, `BL_EVT:APP_CRC_CHECK`, `BL_EVT:APP_CRC_FAIL`.
+- Log: `docs/evidence/v0.2/logs/failure_invalid_final_crc.log`
+- Expected: `BL_EVT:UPDATE_SESSION_END` then `BL_EVT:APP_CRC_FAIL` and no handoff
+- Observed: full transfer completed, then `BL_EVT:UPDATE_SESSION_END`, `BL_EVT:APP_CRC_CHECK`, `BL_EVT:APP_CRC_FAIL`
 - Status: PASS
 
 ### Partial transfer / disconnect
 
-- Expected: chunk timeout path (`BL_EVT:CHUNK_FAIL`) and continued ready loop or recovery after threshold.
-- Attempt log: `docs/evidence/v0.2/logs/failure_partial_transfer_final.log`
-- Observed: interrupted frame (`256/1024` bytes sent) followed by recovery heartbeat sequence (`BL_EVT:RECOVERY_HEARTBEAT:25..35`) in the same dedicated run.
+- Log: `docs/evidence/v0.2/logs/failure_partial_transfer_final.log`
+- Expected: timeout/fail path (`BL_EVT:CHUNK_FAIL`) and safe non-handoff behavior
+- Observed: interrupted frame (`256/1024` bytes) and fail-safe recovery behavior
 - Status: PASS
+
+## Size and media references
+
+- Size snapshot: `docs/evidence/v0.2/size_report.txt`
+- Media path placeholder: `docs/media/v0.2/README.md`
 
 ## Notes
 
-- Negative test runner added: `scripts/send_update_negative.py`
-- Cases available:
-  - `corrupt_chunk`
-  - `oob_offset`
-  - `invalid_final_crc`
-  - `partial_transfer`
-
-All four Day-2 negative cases are now validated on hardware.
+- Negative test runner: `scripts/send_update_negative.py`
+- Cases: `corrupt_chunk`, `oob_offset`, `invalid_final_crc`, `partial_transfer`
+- Recovery idle liveness in current baseline is LED-only (violet gentle blink), not periodic serial heartbeat tokens.

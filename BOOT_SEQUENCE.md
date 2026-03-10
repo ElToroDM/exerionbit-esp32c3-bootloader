@@ -72,9 +72,22 @@ Implemented state tokens:
 - `BL_EVT:UPDATE_SESSION_END`
 - `BL_EVT:UPDATE_START_FAIL`
 - `BL_EVT:UPDATE_SETUP_FAIL`
+- `BL_EVT:RECOVERY_CMD_STATUS`
+- `BL_EVT:RECOVERY_CMD_HELP`
+- `BL_EVT:RECOVERY_CMD_REBOOT`
+- `BL_EVT:RECOVERY_CMD_UPDATE`
+- `BL_EVT:RECOVERY_CMD_UPDATE_OK`
+- `BL_EVT:RECOVERY_CMD_UPDATE_FAIL`
+- `BL_EVT:RECOVERY_CMD_ERASE`
+- `BL_EVT:RECOVERY_CMD_ERASE_OK`
+- `BL_EVT:RECOVERY_CMD_ERASE_FAIL`
+- `BL_EVT:RECOVERY_CMD_BOOT`
+- `BL_EVT:RECOVERY_CMD_BOOT_OK`
+- `BL_EVT:RECOVERY_CMD_BOOT_FAIL`
+- `BL_EVT:RECOVERY_CMD_UNKNOWN`
+- `BL_EVT:RECOVERY_CMD_TOO_LONG`
 
 Additional diagnostic tokens:
-- `BL_EVT:RECOVERY_HEARTBEAT:<n>`
 - `BL_EVT:FATAL_RESET_CODE:<code>`
 
 Token sequence note:
@@ -94,6 +107,7 @@ Normal path:
 
 Recovery/update/fatal:
 - `DECISION_RECOVERY`: MAGENTA bright steady `(20,0,20)`
+- `DECISION_RECOVERY` idle indicator: MAGENTA gentle blink `(20,0,20 <-> 6,0,6)` at `~1.2s` cadence
 - `DECISION_UPDATE`: AMBER steady `(16,10,0)` before update receive loop starts
 - `READY_FOR_UPDATE`/`READY_FOR_CHUNK`: AMBER blink `(16,10,0 <-> 4,2,0)` at `250ms` cadence while waiting on UART input
 - `CHUNK_OK:<offset>`: GREEN pulse `(0,20,0)` for `60ms`
@@ -126,13 +140,50 @@ Selector rules (`GPIO9`):
 
 - On recovery trigger, normal handoff is blocked.
 - `BL_EVT:DECISION_RECOVERY` is emitted before entering hold behavior.
-- LED remains MAGENTA bright steady.
-- Heartbeat token is emitted every 5 seconds.
+- Idle LED blinks in a gentle MAGENTA pattern (`20,0,20 <-> 6,0,6`) to show liveness.
 
 Recovery console status:
-- Current public baseline: command parser is not implemented yet.
-- Recovery behavior is hold + heartbeat only (`BL_EVT:RECOVERY_HEARTBEAT:<n>`).
-- Planned command baseline (next cycle): `status`, `reboot`, `enter_update`, `erase_app`, `boot`.
+- Recovery console is line-oriented over UART (`\n` terminator, ASCII).
+- Canonical commands: `status`, `reboot`, `update`, `erase`, `boot`.
+- Help aliases: `?`, `h`, `help` (all map to one deterministic help response).
+- Responses are single-line ASCII with `BL_RSP:<result>`.
+- Unknown commands produce `BL_RSP:error:unknown_command` and keep recovery active.
+- Command overflow (`>31` chars before newline) produces `BL_RSP:error:command_too_long`.
+
+Recovery command contract:
+- `status`
+  - token: `BL_EVT:RECOVERY_CMD_STATUS`
+  - response: `BL_RSP:status:recovery_active:ready`
+  - state: remain in recovery
+- `reboot`
+  - token: `BL_EVT:RECOVERY_CMD_REBOOT`
+  - response: `BL_RSP:reboot:ok`
+  - action: `bootloader_reset()`
+- `update`
+  - token: `BL_EVT:RECOVERY_CMD_UPDATE`
+  - response: `BL_RSP:update:enter`
+  - action: enters existing `handle_update_mode()` path
+  - success response/token: `BL_RSP:update:ok`, `BL_EVT:RECOVERY_CMD_UPDATE_OK` (continues to normal load/handoff)
+  - fail response/token: `BL_RSP:update:fail`, `BL_EVT:RECOVERY_CMD_UPDATE_FAIL` (returns to recovery)
+- `erase`
+  - token: `BL_EVT:RECOVERY_CMD_ERASE`
+  - action: erase factory app partition sectors only
+  - success response/token: `BL_RSP:erase:ok`, `BL_EVT:RECOVERY_CMD_ERASE_OK`
+  - fail response/token: `BL_RSP:erase:fail`, `BL_EVT:RECOVERY_CMD_ERASE_FAIL`
+  - state: remain in recovery
+- `boot`
+  - token: `BL_EVT:RECOVERY_CMD_BOOT`
+  - action: runs existing `run_app_crc_check()` gate
+  - success response/token: `BL_RSP:boot:crc_ok`, `BL_EVT:RECOVERY_CMD_BOOT_OK` (continues to normal load/handoff)
+  - fail response/token: `BL_RSP:boot:crc_fail`, `BL_EVT:RECOVERY_CMD_BOOT_FAIL` (returns to recovery)
+- `?`, `h`, `help`
+  - token: `BL_EVT:RECOVERY_CMD_HELP`
+  - response: `BL_RSP:help:status,reboot,update,erase,boot,help`
+  - state: remain in recovery
+
+Idle liveness behavior:
+- Recovery liveness is visual-only in idle state (no periodic serial heartbeat token).
+- Command traffic remains fully observable with `BL_EVT:RECOVERY_CMD_*` and `BL_RSP:*`.
 
 ## 6. App CRC verification (all paths)
 
@@ -140,7 +191,7 @@ Recovery console status:
 - **Security Scope:** This baseline check provides *integrity* validation against corruption or
   incomplete updates. Cryptographic *authenticity* (hardware Secure Boot) is configured separately
   via eFuses and is outside the scope of this sequence document.
-- In update mode (`MODE_EXECUTE:UPDATE` or recovery `enter_update`), the same check validates
+- In update mode (`MODE_EXECUTE:UPDATE` or recovery `update`), the same check validates
   the newly targeted image before handoff.
 - CRC check is announced via `BL_EVT:APP_CRC_CHECK`.
 

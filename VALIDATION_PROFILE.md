@@ -35,6 +35,24 @@ Required:
 - `BL_EVT:DECISION_RECOVERY`
 - No `BL_EVT:HANDOFF_APP` while recovery is active
 
+### T2b Recovery command console
+Required:
+
+- Deterministic help response via any alias (`?`, `h`, `help`):
+	- `BL_EVT:RECOVERY_CMD_HELP`
+	- `BL_RSP:help:status,reboot,update,erase,boot,help`
+- Deterministic status response:
+	- `BL_EVT:RECOVERY_CMD_STATUS`
+	- `BL_RSP:status:recovery_active:ready`
+- Unknown command handling:
+	- `BL_EVT:RECOVERY_CMD_UNKNOWN`
+	- `BL_RSP:error:unknown_command`
+- `boot` command CRC gate behavior:
+	- `BL_EVT:RECOVERY_CMD_BOOT`
+	- `BL_EVT:APP_CRC_CHECK`
+	- success path: `BL_EVT:APP_CRC_OK` + normal handoff sequence
+	- fail path: `BL_EVT:APP_CRC_FAIL` and stay in recovery
+
 ### T3 Update integrity pass
 Required:
 
@@ -69,3 +87,6 @@ Optional but recommended for public packaging:
 
 This repository includes hardware-dependent checks.
 When hardware is unavailable, you may run parser-level validation on existing logs and defer live serial execution to the next hardware window.
+
+Recovery liveness note:
+- Current baseline signals recovery idle liveness via LED behavior, not periodic serial heartbeat tokens.

@@ -2,6 +2,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <string.h>
 
 #include "sdkconfig.h"
 #include "bootloader_flash_priv.h"
@@ -9,6 +10,7 @@
 #include "bootloader_utility.h"
 #include "esp_rom_crc.h"
 #include "esp_rom_gpio.h"
+#include "esp_rom_serial_output.h"
 #include "rom/ets_sys.h"
 #include "soc/gpio_reg.h"
 #include "soc/rtc_cntl_reg.h"
@@ -34,6 +36,17 @@
 #define FATAL_BLINK_PERIOD_MS      333U
 #define FATAL_BLINK_ON_MS          (FATAL_BLINK_PERIOD_MS / 2U)
 #define FATAL_BLINK_OFF_MS         (FATAL_BLINK_PERIOD_MS - FATAL_BLINK_ON_MS)
+
+#define RECOVERY_POLL_MS             10U
+#define RECOVERY_CMD_MAX_LEN         32U
+#define RECOVERY_IDLE_BLINK_MS     1200U
+
+#define RECOVERY_LED_BRIGHT_R        20U
+#define RECOVERY_LED_BRIGHT_G         0U
+#define RECOVERY_LED_BRIGHT_B        20U
+#define RECOVERY_LED_DIM_R            6U
+#define RECOVERY_LED_DIM_G            0U
+#define RECOVERY_LED_DIM_B            6U
 
 #define BOOT_CTX_MAGIC             0x424C4358U
 #define BOOT_CTX_UNKNOWN           0U
@@ -91,8 +104,18 @@ static const led_rgb_t s_mode_ring_colors[] = {
 
 #define MODE_RING_SIZE (sizeof(s_mode_ring) / sizeof(s_mode_ring[0]))
 
+typedef enum {
+    RECOVERY_ACTION_STAY = 0,
+    RECOVERY_ACTION_BOOT = 1,
+} recovery_action_t;
+
 static void feed_watchdog(void);
 static bool run_app_crc_check(const bootloader_state_t *boot_state);
+static bool erase_factory_partition(const bootloader_state_t *boot_state);
+static recovery_action_t handle_recovery_command(
+    const char *line,
+    const bootloader_state_t *boot_state,
+    const update_mode_hooks_t *update_hooks);
 
 static void delay_ms(uint32_t delay_ms_value)
 {
@@ -198,14 +221,191 @@ static uint32_t compute_flash_crc32(uint32_t offset, uint32_t length)
     return crc;
 }
 
-static void enter_recovery_loop(void)
+static void emit_recovery_response(const char *line)
 {
-    emit_evt("DECISION_RECOVERY");
-    set_led((led_rgb_t){20, 0, 20});
+    ets_printf("BL_RSP:%s\n", line);
+}
 
-    for (uint32_t heartbeat = 1U;; ++heartbeat) {
-        emit_evt_with_value("RECOVERY_HEARTBEAT", heartbeat);
-        delay_ms(5000U);
+static void normalize_ascii_lowercase(char *text)
+{
+    if (text == NULL) {
+        return;
+    }
+
+    for (char *p = text; *p != '\0'; ++p) {
+        if (*p >= 'A' && *p <= 'Z') {
+            *p = (char)(*p - 'A' + 'a');
+        }
+    }
+}
+
+static bool erase_factory_partition(const bootloader_state_t *boot_state)
+{
+    const uint32_t partition_offset = boot_state->factory.offset;
+    const uint32_t partition_size = boot_state->factory.size;
+
+    if (partition_size == 0U || (partition_size % FLASH_SECTOR_SIZE) != 0U) {
+        return false;
+    }
+
+    const uint32_t first_sector = partition_offset / FLASH_SECTOR_SIZE;
+    const uint32_t sector_count = partition_size / FLASH_SECTOR_SIZE;
+    for (uint32_t sector = 0U; sector < sector_count; ++sector) {
+        if (bootloader_flash_erase_sector(first_sector + sector) != ESP_OK) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+static recovery_action_t handle_recovery_command(
+    const char *line,
+    const bootloader_state_t *boot_state,
+    const update_mode_hooks_t *update_hooks)
+{
+    char normalized[RECOVERY_CMD_MAX_LEN] = {0};
+
+    if (line == NULL || boot_state == NULL || update_hooks == NULL) {
+        emit_recovery_response("error:invalid_request");
+        return RECOVERY_ACTION_STAY;
+    }
+
+    strncpy(normalized, line, sizeof(normalized) - 1U);
+    normalize_ascii_lowercase(normalized);
+
+    if (strcmp(normalized, "status") == 0) {
+        emit_evt("RECOVERY_CMD_STATUS");
+        emit_recovery_response("status:recovery_active:ready");
+        return RECOVERY_ACTION_STAY;
+    }
+
+    if (strcmp(normalized, "?") == 0 || strcmp(normalized, "h") == 0 || strcmp(normalized, "help") == 0) {
+        emit_evt("RECOVERY_CMD_HELP");
+        emit_recovery_response("help:status,reboot,update,erase,boot,help");
+        return RECOVERY_ACTION_STAY;
+    }
+
+    if (strcmp(normalized, "reboot") == 0) {
+        emit_evt("RECOVERY_CMD_REBOOT");
+        emit_recovery_response("reboot:ok");
+        bootloader_reset();
+        for (;;) {
+        }
+    }
+
+    if (strcmp(normalized, "update") == 0) {
+        emit_evt("RECOVERY_CMD_UPDATE");
+        emit_recovery_response("update:enter");
+        if (handle_update_mode(boot_state, update_hooks)) {
+            emit_evt("RECOVERY_CMD_UPDATE_OK");
+            emit_recovery_response("update:ok");
+            return RECOVERY_ACTION_BOOT;
+        }
+
+        emit_evt("RECOVERY_CMD_UPDATE_FAIL");
+        emit_recovery_response("update:fail");
+        return RECOVERY_ACTION_STAY;
+    }
+
+    if (strcmp(normalized, "erase") == 0) {
+        emit_evt("RECOVERY_CMD_ERASE");
+        if (erase_factory_partition(boot_state)) {
+            emit_evt("RECOVERY_CMD_ERASE_OK");
+            emit_recovery_response("erase:ok");
+        } else {
+            emit_evt("RECOVERY_CMD_ERASE_FAIL");
+            emit_recovery_response("erase:fail");
+        }
+        return RECOVERY_ACTION_STAY;
+    }
+
+    if (strcmp(normalized, "boot") == 0) {
+        emit_evt("RECOVERY_CMD_BOOT");
+        if (run_app_crc_check(boot_state)) {
+            emit_evt("RECOVERY_CMD_BOOT_OK");
+            emit_recovery_response("boot:crc_ok");
+            return RECOVERY_ACTION_BOOT;
+        }
+
+        emit_evt("RECOVERY_CMD_BOOT_FAIL");
+        emit_recovery_response("boot:crc_fail");
+        return RECOVERY_ACTION_STAY;
+    }
+
+    emit_evt("RECOVERY_CMD_UNKNOWN");
+    emit_recovery_response("error:unknown_command");
+    return RECOVERY_ACTION_STAY;
+}
+
+static bool enter_recovery_loop(
+    const bootloader_state_t *boot_state,
+    const update_mode_hooks_t *update_hooks)
+{
+    char line[RECOVERY_CMD_MAX_LEN] = {0};
+    uint32_t line_index = 0U;
+    uint32_t blink_elapsed_ms = 0U;
+    bool blink_bright = true;
+
+    if (boot_state == NULL || update_hooks == NULL) {
+        return false;
+    }
+
+    emit_evt("DECISION_RECOVERY");
+    set_led((led_rgb_t){RECOVERY_LED_BRIGHT_R, RECOVERY_LED_BRIGHT_G, RECOVERY_LED_BRIGHT_B});
+
+    for (;;) {
+        uint8_t byte = 0U;
+        bool consumed_byte = false;
+
+        while (esp_rom_output_rx_one_char(&byte) == 0) {
+            consumed_byte = true;
+
+            if (byte == '\n' || byte == '\r') {
+                line[line_index] = '\0';
+                line_index = 0U;
+
+                if (line[0] != '\0') {
+                    recovery_action_t action = handle_recovery_command(line, boot_state, update_hooks);
+                    if (action == RECOVERY_ACTION_BOOT) {
+                        return true;
+                    }
+
+                    set_led((led_rgb_t){
+                        blink_bright ? RECOVERY_LED_BRIGHT_R : RECOVERY_LED_DIM_R,
+                        blink_bright ? RECOVERY_LED_BRIGHT_G : RECOVERY_LED_DIM_G,
+                        blink_bright ? RECOVERY_LED_BRIGHT_B : RECOVERY_LED_DIM_B,
+                    });
+                    blink_elapsed_ms = 0U;
+                }
+
+                continue;
+            }
+
+            if (line_index < (RECOVERY_CMD_MAX_LEN - 1U)) {
+                line[line_index++] = (char)byte;
+                continue;
+            }
+
+            // Overflowed command line: flush until newline and report once.
+            line_index = 0U;
+            emit_evt("RECOVERY_CMD_TOO_LONG");
+            emit_recovery_response("error:command_too_long");
+        }
+
+        if (!consumed_byte) {
+            delay_ms(RECOVERY_POLL_MS);
+            blink_elapsed_ms += RECOVERY_POLL_MS;
+            if (blink_elapsed_ms >= RECOVERY_IDLE_BLINK_MS) {
+                blink_bright = !blink_bright;
+                set_led((led_rgb_t){
+                    blink_bright ? RECOVERY_LED_BRIGHT_R : RECOVERY_LED_DIM_R,
+                    blink_bright ? RECOVERY_LED_BRIGHT_G : RECOVERY_LED_DIM_G,
+                    blink_bright ? RECOVERY_LED_BRIGHT_B : RECOVERY_LED_DIM_B,
+                });
+                blink_elapsed_ms = 0U;
+            }
+        }
     }
 }
 
@@ -395,25 +595,33 @@ void __attribute__((noreturn)) call_start_cpu0(void)
 
     delay_ms(USB_RECONNECT_MS);
 
+    const update_mode_hooks_t update_hooks = {
+        .delay_ms = delay_ms,
+        .emit_evt = emit_evt,
+        .emit_evt_with_value = emit_evt_with_value,
+        .set_led_rgb = set_led_rgb,
+        .run_app_crc_check = run_app_crc_check,
+    };
+
     boot_mode_t selected_mode = run_mode_selector();
 
     if (selected_mode == BOOT_MODE_RECOVERY) {
         publish_boot_context(BOOT_CTX_RECOVERY);
-        enter_recovery_loop();
+        if (!enter_recovery_loop(&boot_state, &update_hooks)) {
+            fatal_reset_loop(4U);
+        }
+        selected_mode = BOOT_MODE_NORMAL;
     }
 
     if (selected_mode == BOOT_MODE_UPDATE) {
-        const update_mode_hooks_t update_hooks = {
-            .delay_ms = delay_ms,
-            .emit_evt = emit_evt,
-            .emit_evt_with_value = emit_evt_with_value,
-            .set_led_rgb = set_led_rgb,
-            .run_app_crc_check = run_app_crc_check,
-        };
         set_led(s_normal_phases[3].color);
         delay_ms(phase_duration_ms(s_normal_phases[3].visual_percent));
         if (!handle_update_mode(&boot_state, &update_hooks)) {
-            enter_recovery_loop();
+            publish_boot_context(BOOT_CTX_RECOVERY);
+            if (!enter_recovery_loop(&boot_state, &update_hooks)) {
+                fatal_reset_loop(5U);
+            }
+            selected_mode = BOOT_MODE_NORMAL;
         }
     } else {
         emit_evt(s_normal_phases[3].token);  // DECISION_NORMAL
@@ -422,7 +630,11 @@ void __attribute__((noreturn)) call_start_cpu0(void)
 
         // CRC check runs in all non-recovery paths.
         if (!run_app_crc_check(&boot_state)) {
-            enter_recovery_loop();
+            publish_boot_context(BOOT_CTX_RECOVERY);
+            if (!enter_recovery_loop(&boot_state, &update_hooks)) {
+                fatal_reset_loop(6U);
+            }
+            selected_mode = BOOT_MODE_NORMAL;
         }
     }
 
