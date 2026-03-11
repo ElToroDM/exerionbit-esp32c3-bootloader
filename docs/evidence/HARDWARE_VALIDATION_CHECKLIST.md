@@ -41,7 +41,7 @@ Purpose: execute deterministic hardware-in-the-loop validation for public baseli
 - [x] Enter recovery mode using selector (covered by existing v0.2 evidence logs)
 - [x] Verify BL_EVT:DECISION_RECOVERY
 - [x] Verify no BL_EVT:HANDOFF_APP while recovery is active (strict hold mode)
-- [ ] Run commands and verify deterministic responses:
+- [x] Run commands and verify deterministic responses:
   - status
   - help (or ? / h)
   - unknown command
