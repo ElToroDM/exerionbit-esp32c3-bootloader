@@ -21,9 +21,11 @@ The descriptor tells the bootloader exactly how many bytes to read.
 
 CRC algorithm
 -------------
-CRC-32/ISO-HDLC: poly=0xEDB88320, init=0xFFFFFFFF, final XOR=0xFFFFFFFF.
-This matches zlib.crc32(data) & 0xFFFFFFFF in Python and
-esp_rom_crc32_le(UINT32_MAX, ...) ^ UINT32_MAX in the bootloader C code.
+CRC-32/ISO-HDLC with the same API contract used by the bootloader code:
+- Python: zlib.crc32(data) & 0xFFFFFFFF
+- Bootloader: esp_rom_crc32_le(0, ...) with incremental updates
+
+Both produce the same 32-bit value stored in the partition descriptor.
 
 Default partition size: 1 MiB (matches partitions.csv factory entry).
 """
@@ -37,6 +39,7 @@ from pathlib import Path
 
 
 DEFAULT_PARTITION_SIZE = 0x100000
+DEFAULT_PARTITIONS_CSV = Path(__file__).resolve().parents[1] / "partitions.csv"
 ERASE_VALUE = 0xFF
 DESCRIPTOR_SIZE = 8  # image_size (4 bytes LE) + crc32 (4 bytes LE)
 
@@ -45,8 +48,47 @@ def parse_int(text: str) -> int:
     return int(text, 0)
 
 
+def parse_partition_size_token(text: str) -> int:
+    token = text.strip()
+    if not token:
+        raise ValueError("Empty partition size token")
+
+    upper = token.upper()
+    if upper.endswith("K"):
+        base = int(upper[:-1], 0)
+        return base * 1024
+    if upper.endswith("M"):
+        base = int(upper[:-1], 0)
+        return base * 1024 * 1024
+
+    return int(token, 0)
+
+
+def resolve_factory_partition_size(partitions_csv: Path | None) -> int:
+    if partitions_csv is None:
+        return DEFAULT_PARTITION_SIZE
+
+    if not partitions_csv.exists():
+        raise FileNotFoundError(f"Partition table not found: {partitions_csv}")
+
+    for raw_line in partitions_csv.read_text(encoding="utf-8").splitlines():
+        stripped = raw_line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+
+        fields = [field.strip() for field in stripped.split(",")]
+        if len(fields) < 5:
+            continue
+
+        name, p_type, subtype, _, size = fields[:5]
+        if name == "factory" and p_type == "app" and subtype == "factory":
+            return parse_partition_size_token(size)
+
+    raise ValueError(f"Could not resolve factory partition size from {partitions_csv}")
+
+
 def compute_crc32(data: bytes) -> int:
-    """CRC-32/ISO-HDLC — matches zlib.crc32() and esp_rom_crc32_le(^0xFFFF) ^ 0xFFFF."""
+    """CRC-32/ISO-HDLC compatible with bootloader-side esp_rom_crc32_le(0, ...)."""
     return zlib.crc32(data) & 0xFFFFFFFF
 
 
@@ -103,8 +145,14 @@ def main() -> None:
     parser.add_argument(
         "--partition-size",
         type=parse_int,
-        default=DEFAULT_PARTITION_SIZE,
-        help="Factory partition size in bytes (default: 0x100000 = 1 MiB)",
+        default=None,
+        help="Factory partition size in bytes (overrides partitions.csv autodetection)",
+    )
+    parser.add_argument(
+        "--partitions-csv",
+        type=Path,
+        default=DEFAULT_PARTITIONS_CSV,
+        help="Partition table CSV used to autodetect factory partition size",
     )
     parser.add_argument(
         "--out-image",
@@ -119,6 +167,9 @@ def main() -> None:
     )
 
     args = parser.parse_args()
+
+    if args.partition_size is None:
+        args.partition_size = resolve_factory_partition_size(args.partitions_csv)
 
     # Default output: always build/factory_crc_partition.bin.
     # Never overwrite the app binary — that confuses ninja's dependency tracking.

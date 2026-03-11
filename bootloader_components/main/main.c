@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "sdkconfig.h"
+#include "boot_config.h"
 #include "bootloader_flash_priv.h"
 #include "bootloader_init.h"
 #include "bootloader_utility.h"
@@ -38,7 +39,6 @@
 #define FATAL_BLINK_OFF_MS         (FATAL_BLINK_PERIOD_MS - FATAL_BLINK_ON_MS)
 
 #define RECOVERY_POLL_MS             10U
-#define RECOVERY_CMD_MAX_LEN         32U
 #define RECOVERY_IDLE_BLINK_MS     1200U
 
 #define RECOVERY_LED_BRIGHT_R        20U
@@ -197,28 +197,33 @@ typedef struct {
 // Read 'length' bytes from flash at 'offset' and compute CRC-32.
 // esp_rom_crc32_le(0, buf, len) == zlib.crc32(data) & 0xFFFFFFFF.
 // Init with 0 and no final XOR to match the host tool (scripts/append_crc.py).
-// Returns 0 on any flash read error (forces mismatch).
-#define CRC_READ_CHUNK_SIZE    256U
+// Returns false on flash read error and leaves *out_crc unchanged.
+#define CRC_READ_CHUNK_SIZE    BL_CRC_READ_CHUNK_SIZE
 
-static uint32_t compute_flash_crc32(uint32_t offset, uint32_t length)
+static bool compute_flash_crc32(uint32_t offset, uint32_t length, uint32_t *out_crc)
 {
     static uint8_t s_crc_chunk[CRC_READ_CHUNK_SIZE];
     uint32_t crc = 0U;
     uint32_t remaining = length;
     uint32_t addr = offset;
 
+    if (out_crc == NULL) {
+        return false;
+    }
+
     while (remaining > 0U) {
         uint32_t to_read = (remaining < CRC_READ_CHUNK_SIZE) ? remaining : CRC_READ_CHUNK_SIZE;
         esp_err_t err = bootloader_flash_read(addr, s_crc_chunk, to_read, false);
         if (err != ESP_OK) {
-            return 0U;
+            return false;
         }
         crc = esp_rom_crc32_le(crc, s_crc_chunk, to_read);
         addr += to_read;
         remaining -= to_read;
     }
 
-    return crc;
+    *out_crc = crc;
+    return true;
 }
 
 static void emit_recovery_response(const char *line)
@@ -264,7 +269,7 @@ static recovery_action_t handle_recovery_command(
     const bootloader_state_t *boot_state,
     const update_mode_hooks_t *update_hooks)
 {
-    char normalized[RECOVERY_CMD_MAX_LEN] = {0};
+    char normalized[BL_RECOVERY_CMD_MAX_LEN] = {0};
 
     if (line == NULL || boot_state == NULL || update_hooks == NULL) {
         emit_recovery_response("error:invalid_request");
@@ -342,10 +347,11 @@ static bool enter_recovery_loop(
     const bootloader_state_t *boot_state,
     const update_mode_hooks_t *update_hooks)
 {
-    char line[RECOVERY_CMD_MAX_LEN] = {0};
+    char line[BL_RECOVERY_CMD_MAX_LEN] = {0};
     uint32_t line_index = 0U;
     uint32_t blink_elapsed_ms = 0U;
     bool blink_bright = true;
+    bool discarding_oversized_line = false;
 
     if (boot_state == NULL || update_hooks == NULL) {
         return false;
@@ -362,6 +368,12 @@ static bool enter_recovery_loop(
             consumed_byte = true;
 
             if (byte == '\n' || byte == '\r') {
+                if (discarding_oversized_line) {
+                    discarding_oversized_line = false;
+                    line_index = 0U;
+                    continue;
+                }
+
                 line[line_index] = '\0';
                 line_index = 0U;
 
@@ -382,13 +394,18 @@ static bool enter_recovery_loop(
                 continue;
             }
 
-            if (line_index < (RECOVERY_CMD_MAX_LEN - 1U)) {
+            if (discarding_oversized_line) {
+                continue;
+            }
+
+            if (line_index < (BL_RECOVERY_CMD_MAX_LEN - 1U)) {
                 line[line_index++] = (char)byte;
                 continue;
             }
 
-            // Overflowed command line: flush until newline and report once.
+            // Overflowed command line: discard bytes until newline and report once.
             line_index = 0U;
+            discarding_oversized_line = true;
             emit_evt("RECOVERY_CMD_TOO_LONG");
             emit_recovery_response("error:command_too_long");
         }
@@ -456,6 +473,14 @@ static bool run_app_crc_check(const bootloader_state_t *boot_state)
         return false;
     }
 
+    // Guard against arithmetic overflow when computing absolute descriptor offset.
+    if (flash_offset > (UINT32_MAX - partition_size)) {
+        emit_evt("APP_CRC_FAIL");
+        set_led((led_rgb_t){20, 0, 0});
+        delay_ms(UPDATE_VERIFY_FAIL_MS);
+        return false;
+    }
+
     // Read the 8-byte descriptor from the end of the partition
     app_crc_descriptor_t descriptor = {0};
     const uint32_t desc_offset = flash_offset + partition_size - APP_CRC_DESCRIPTOR_SIZE;
@@ -476,8 +501,22 @@ static bool run_app_crc_check(const bootloader_state_t *boot_state)
         return false;
     }
 
+    // Guard against arithmetic overflow while computing image end address.
+    if (flash_offset > (UINT32_MAX - descriptor.image_size)) {
+        emit_evt("APP_CRC_FAIL");
+        set_led((led_rgb_t){20, 0, 0});
+        delay_ms(UPDATE_VERIFY_FAIL_MS);
+        return false;
+    }
+
     // Compute CRC-32/ISO-HDLC over only the actual app image bytes
-    uint32_t observed_crc = compute_flash_crc32(flash_offset, descriptor.image_size);
+    uint32_t observed_crc = 0U;
+    if (!compute_flash_crc32(flash_offset, descriptor.image_size, &observed_crc)) {
+        emit_evt("APP_CRC_FAIL");
+        set_led((led_rgb_t){20, 0, 0});
+        delay_ms(UPDATE_VERIFY_FAIL_MS);
+        return false;
+    }
 
 #ifdef CONFIG_BOOTLOADER_TEST_CRC_FORCE_FAIL
     // Corrupt observed value to force a mismatch — validation testing only

@@ -72,6 +72,14 @@ Required:
 - `docs/evidence/<release>/expected-vs-observed.md`
 - `docs/evidence/<release>/logs/*.log`
 
+`expected-vs-observed.md` must include these fields per test case:
+- date/time and release tag or commit id
+- board and connection context (target board, serial mode/port)
+- toolchain/runtime context (ESP-IDF version, Python version, esptool version)
+- command(s) used for build/flash/monitor or script execution
+- expected token sequence and observed token sequence
+- final result status (`PASS`, `FAIL`, or `PARTIAL`) with rationale
+
 When live serial logs are unavailable (hardware window closed), the release record must:
 
 - include build artifact metadata in `expected-vs-observed.md`

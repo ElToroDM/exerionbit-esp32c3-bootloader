@@ -2,15 +2,16 @@
 
 #include <string.h>
 
+#include "boot_config.h"
 #include "bootloader_flash_priv.h"
 #include "esp_rom_serial_output.h"
 
-#define UPDATE_CHUNK_MAX_SIZE      1024U
-#define UPDATE_HEADER_MAX_LEN       96U
-#define UPDATE_CMD_MAX_LEN          32U
-#define UPDATE_CHUNK_TIMEOUT_MS   120000U
-#define UPDATE_MAX_ERRORS            10U
-#define UPDATE_MAX_TRACKED_SECTORS 1024U
+#define UPDATE_CHUNK_MAX_SIZE      BL_UPDATE_CHUNK_MAX_SIZE
+#define UPDATE_HEADER_MAX_LEN      BL_UPDATE_HEADER_MAX_LEN
+#define UPDATE_CMD_MAX_LEN         BL_UPDATE_CMD_MAX_LEN
+#define UPDATE_CHUNK_TIMEOUT_MS    BL_UPDATE_CHUNK_TIMEOUT_MS
+#define UPDATE_MAX_ERRORS          BL_UPDATE_MAX_ERRORS
+#define UPDATE_MAX_TRACKED_SECTORS BL_UPDATE_MAX_TRACKED_SECTORS
 
 #define UPDATE_WAIT_BLINK_MS       250U
 
@@ -244,6 +245,11 @@ bool handle_update_mode(const bootloader_state_t *boot_state, const update_mode_
         return false;
     }
 
+    if (partition_offset > (UINT32_MAX - partition_size)) {
+        hooks->emit_evt("UPDATE_SETUP_FAIL");
+        return false;
+    }
+
     memset(s_erased_sector, 0, sizeof(s_erased_sector));
 
     hooks->emit_evt("DECISION_UPDATE");
@@ -333,7 +339,18 @@ bool handle_update_mode(const bootloader_state_t *boot_state, const update_mode_
 
         for (uint32_t sector = first_sector_rel; sector <= last_sector_rel; ++sector) {
             if (!s_erased_sector[sector]) {
-                const uint32_t absolute_sector = (partition_offset / FLASH_SECTOR_SIZE) + sector;
+                const uint32_t partition_base_sector = partition_offset / FLASH_SECTOR_SIZE;
+                if (partition_base_sector > (UINT32_MAX - sector)) {
+                    ++errors;
+                    hooks->emit_evt_with_value("CHUNK_FAIL", chunk_offset);
+                    pulse_led(&runtime, 20U, 0U, 0U, 80U);
+                    if (errors >= UPDATE_MAX_ERRORS) {
+                        return false;
+                    }
+                    goto next_chunk;
+                }
+
+                const uint32_t absolute_sector = partition_base_sector + sector;
                 if (bootloader_flash_erase_sector(absolute_sector) != ESP_OK) {
                     ++errors;
                     hooks->emit_evt_with_value("CHUNK_FAIL", chunk_offset);
@@ -345,6 +362,16 @@ bool handle_update_mode(const bootloader_state_t *boot_state, const update_mode_
                 }
                 s_erased_sector[sector] = true;
             }
+        }
+
+        if (partition_offset > (UINT32_MAX - chunk_offset)) {
+            ++errors;
+            hooks->emit_evt_with_value("CHUNK_FAIL", chunk_offset);
+            pulse_led(&runtime, 20U, 0U, 0U, 80U);
+            if (errors >= UPDATE_MAX_ERRORS) {
+                return false;
+            }
+            continue;
         }
 
         write_addr = partition_offset + chunk_offset;

@@ -4,10 +4,22 @@ Scope: normal boot, update protocol, recovery command console, and failure-case 
 
 ## Environment
 
+- Date: 2026-03-10
+ - Last validated: 2026-03-11 (flashed and monitored using `idf.py` + `idf_monitor`)
+- Release context: working tree validation on `main` (post-refactor, pre-tag)
 - Board: Waveshare ESP32-C3 Zero
-- Port: COM4
+- Connection: USB CDC, COM4
 - Baud: 115200
+- ESP-IDF: v6.1 (workspace toolchain)
 - Host Python: `C:\Users\Admin\.espressif\python_env\idf6.1_py3.11_env\Scripts\python.exe`
+- esptool: v5.2.dev4 (from build output)
+
+## Commands used
+
+- Build: `idf.py build`
+- Flash: `idf.py -p COM4 flash`
+- Monitor/capture: `idf.py -p COM4 monitor` and `python scripts/watch_serial.py --inactivity 10`
+- Negative update tests: `python scripts/send_update_negative.py --port COM4 --case <case_name>`
 
 ## Normal boot
 
@@ -79,3 +91,51 @@ Scope: normal boot, update protocol, recovery command console, and failure-case 
 - Negative test runner: `scripts/send_update_negative.py`
 - Cases: `corrupt_chunk`, `oob_offset`, `invalid_final_crc`, `partial_transfer`
 - Recovery idle liveness in current baseline is LED-only (violet gentle blink), not periodic serial heartbeat tokens.
+
+## Validation summary
+
+- Evidence validated: `docs/evidence/v0.2`
+- Validation commands run:
+  - `python scripts/validate_evidence_contract.py docs/evidence/v0.2` → FINAL: PASS (2026-03-11)
+  - `python scripts/validate_bootlog.py --profile normal --log docs/evidence/v0.2/logs/normal_boot.log` → FINAL: PASS
+  - `python scripts/validate_bootlog.py --profile recovery --allow-recovery-handoff --log docs/evidence/v0.2/logs/recovery_commands.log` → FINAL: PASS
+
+All artifacts and logs referenced above were captured during the live flash/monitor session on 2026-03-11 and are present under `docs/evidence/v0.2/`.
+
+## Validator outputs
+
+Normal boot validator (command):
+`python scripts/validate_bootlog.py --profile normal --log docs/evidence/v0.2/logs/normal_boot.log`
+
+```
+Log: docs\evidence\v0.2\logs\normal_boot.log
+Profile: normal
+Lines: 15
+[PASS] BL_EVT:DECISION_ANY
+[PASS] BL_EVT:APP_CRC_CHECK
+[PASS] BL_EVT:APP_CRC_OK
+[PASS] BL_EVT:LOAD_APP
+[PASS] BL_EVT:HANDOFF
+[PASS] BL_EVT:HANDOFF_APP
+[PASS] APP_EVT:START
+[PASS] APP_EVT:BOOTLOADER_HANDOFF_OK
+[PASS] Recovery path not observed in this log (non-blocking).
+[PASS] CRC fail path not observed in this log (non-blocking).
+
+FINAL: PASS
+```
+
+Recovery console validator (command):
+`python scripts/validate_bootlog.py --profile recovery --allow-recovery-handoff --log docs/evidence/v0.2/logs/recovery_commands.log`
+
+```
+Log: docs\evidence\v0.2\logs\recovery_commands.log
+Profile: recovery
+Lines: 38
+[PASS] BL_EVT:DECISION_RECOVERY
+[PASS] BL_EVT:RECOVERY_CMD_STATUS
+[PASS] Recovery token observed with later handoff (allowed by profile).
+[PASS] CRC fail path not observed in this log (non-blocking).
+
+FINAL: PASS
+```

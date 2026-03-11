@@ -11,7 +11,7 @@ include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(waveshare_esp32c3_zero_bootloader)
 
 # Enforce CRC-OK app image on every build so ESP-IDF extension Flash uses a valid descriptor.
-set(APP_BIN_PATH "${CMAKE_BINARY_DIR}/waveshare_esp32c3_zero_bootloader.bin")
+set(APP_BIN_PATH "${CMAKE_BINARY_DIR}/${PROJECT_NAME}.bin")
 
 add_custom_target(crc_ok_build ALL
 	COMMAND ${PYTHON} ${CMAKE_CURRENT_LIST_DIR}/scripts/append_crc.py
