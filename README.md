@@ -6,6 +6,9 @@
 
 Minimal ESP-IDF bootloader for the Waveshare ESP32-C3 Zero board.
 
+Boot flow aligned with BRS-B principles (RISC-V ecosystem, ratified 2025): minimal, standardized handoff, no heavy UEFI/ACPI stack.
+Scope note: this repository demonstrates baseline alignment, not full production hardening or full standards conformance.
+
 ## What this repository proves
 
 - Deterministic ESP32-C3 second-stage boot behavior on real hardware baseline
@@ -36,6 +39,20 @@ Minimal ESP-IDF bootloader for the Waveshare ESP32-C3 Zero board.
 
 - Open an issue for scoped bootloader adaptation work
 - See `BOOT_SEQUENCE.md` and `VALIDATION_PROFILE.md` for the canonical contract
+
+## Need / Scope / Timeline
+
+| Need | Typical timeline | Includes | Evidence artifact | Contact |
+|---|---|---|---|---|
+| UART/serial update baseline | 1-2 days | Deterministic transport + CRC path + logs | `docs/evidence/<release>/logs/recovery_update.log` | email |
+| Factory/recovery baseline | 3-5 days | GPIO trigger + selector tokens + LED diagnostics | `docs/evidence/<release>/expected-vs-observed.md` | email |
+| Lightweight secure baseline | 5-10 days | Integrity/signature baseline mapping + BRS-B principles note | `docs/evidence/<release>/compliance-baseline.md` | email |
+
+## Standards alignment (baseline)
+
+- BRS-B principles alignment: minimal boot flow, explicit handoff contract, no heavy UEFI/ACPI dependency.
+- Scope guardrail: this public repository is not a full BRS/BRS-B conformance claim.
+- Reference: RISC-V BRS ratification (2025), last checked 2026-03-18.
 
 ## Hardware
 - **Board**: Waveshare ESP32-C3 Zero

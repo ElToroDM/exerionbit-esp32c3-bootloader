@@ -4,6 +4,8 @@
 
 This public repository provides a minimal, reproducible bootloader baseline for ESP32-C3.
 
+**Standards note:** this asset is aligned with BRS-B principles (minimal boot path, explicit handoff, no heavy UEFI/ACPI dependency), but it is not a full BRS/BRS-B conformance claim.
+
 Included in scope:
 - deterministic boot decision behavior
 - baseline integrity signaling and validation flow (CRC-32/ISO-HDLC app payload validation)
