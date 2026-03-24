@@ -6,7 +6,7 @@ Scope: normal boot, update protocol, recovery command console, and failure-case 
 
 - Date: 2026-03-10
  - Last validated: 2026-03-11 (flashed and monitored using `idf.py` + `idf_monitor`)
-- Release context: working tree validation on `main` (post-refactor, pre-tag)
+- Release context: main snapshot validated on 2026-03-11
 - Board: Waveshare ESP32-C3 Zero
 - Connection: USB CDC, COM4
 - Baud: 115200

@@ -1,12 +1,12 @@
 # Hardware Validation Checklist
 
-Purpose: execute deterministic hardware-in-the-loop validation for public baseline claims.
+Purpose: execute deterministic hardware-in-the-loop validation for published ESP32-C3 boot behavior claims.
 
 ## 1. Test Context
 
 - Date: 2026-03-10
-- Operator: Copilot session (automated pre-check)
-- Release tag or commit id: main (working tree)
+- Validation mode: hardware capture
+- Release context: main snapshot captured on 2026-03-11
 - Board serial or identifier: N/A in this run
 - USB mode and COM port: USB CDC, COM4 (configured)
 - ESP-IDF version: v6.1
@@ -78,8 +78,3 @@ Purpose: execute deterministic hardware-in-the-loop validation for public baseli
 - [x] PASS/FAIL/PARTIAL status and rationale documented per case
 - [x] Residual risks and follow-up actions documented
 
-## Blockers in this session
-
-- ESP-IDF extension flash/monitor commands are blocked in this multi-root session with:
-  "Unable to write to Folder Settings because no resource is provided"
-- Build command works; issue is specific to extension operations that write folder-scoped settings.

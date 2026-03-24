@@ -23,15 +23,13 @@
 
 ## Security scope
 
-- Secure Boot is **disabled** in this public baseline. This repository demonstrates boot
-  decision logic, LED/token signaling, and structural correctness only.
-- Flash Encryption is **disabled**.
+- Secure boot, flash encryption, and related platform security features are not included
+  in this repository.
 - Production hardening (key provisioning, anti-tamper, rollback protection) is out of scope
   for this proof asset.
-- This public baseline does **not** include production fault-injection hardening.
-- This public baseline does **not** include production key provisioning.
-- Advanced hardening and key lifecycle architecture are available only in private,
-  scoped engagements.
+- This repository does **not** include production fault-injection hardening.
+- This repository does **not** include production key provisioning.
+- Advanced hardening and key lifecycle architecture belong to separate project scopes.
 
 ## Component override mechanism
 
@@ -58,7 +56,7 @@
   - Missing chunk bytes eventually trigger `CHUNK_FAIL` after timeout.
   - Repeated failures (10 consecutive) abort update mode to recovery.
 - No transactional resume exists across reset/power-loss; host must restart transfer from offset 0.
-- No dual-bank rollback path exists in public baseline.
+- No dual-bank rollback path exists in this repository.
 
 ## Protocol and operability constraints
 

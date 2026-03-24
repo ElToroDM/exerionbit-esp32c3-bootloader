@@ -35,7 +35,7 @@ This repository shows a minimal ESP32-C3 bootloader baseline on real hardware, w
 
 - Live validation requires physical ESP32-C3 hardware access
 - Native USB re-enumeration can hide very early boot lines without watcher tooling
-- Public repository documents baseline behavior, not full production hardening
+- Repository documentation covers baseline behavior, not full production hardening
 
 ## Contact
 
@@ -56,7 +56,7 @@ ESP32-C6 work may require separate validation and board-specific assumptions.
 ## Standards alignment (baseline)
 
 - BRS-B principles alignment: minimal boot flow, explicit handoff contract, no heavy UEFI/ACPI dependency.
-- Scope guardrail: this public repository is not a full BRS/BRS-B conformance claim.
+- Scope note: this repository is not a full BRS/BRS-B conformance claim.
 - Reference: RISC-V BRS ratification (2025), last checked 2026-03-18.
 
 ## Hardware
@@ -119,7 +119,7 @@ Selector/update path (`GPIO9`):
 - `BL_EVT:MODE_SELECTED:UPDATE` (and mode cycling on short press)
 - `BL_EVT:MODE_EXECUTE:UPDATE` (long press)
 - `BL_EVT:DECISION_UPDATE` is emitted when update mode is executed.
-- Update protocol is implemented in the public baseline:
+- Update protocol is implemented in this repository:
     - host sends `START_UPDATE`
     - device emits `READY_FOR_CHUNK`
     - host sends `[LEN:OFFSET:CRC16]` + payload
