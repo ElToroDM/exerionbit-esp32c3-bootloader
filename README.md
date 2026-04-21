@@ -77,7 +77,7 @@ To flash the board:
 
 ### Automated setup (recommended)
 
-1. Install ESP‑IDF v6.1 (or use VS Code ESP‑IDF extension).
+1. Install ESP‑IDF v6.0 (or use VS Code ESP‑IDF extension).
 2. See [SETUP.md](SETUP.md) for one-time PowerShell profile setup that configures all paths, tools, and convenience wrappers.
 3. After setup, use any of:
    - **VS Code**: ESP‑IDF extension → Build → Flash → Monitor
@@ -89,9 +89,10 @@ To flash the board:
 
 In PowerShell:
 ```powershell
-$env:IDF_PATH = 'C:\esp\esp-idf'
-$idfPythonDir = "$env:USERPROFILE\.espressif\python_env\idf6.1_py3.11_env\Scripts"
-& "$idfPythonDir\python.exe" C:\esp\esp-idf\tools\idf.py build
+$env:IDF_PATH = 'C:\esp\v6.0\esp-idf'
+$env:IDF_TOOLS_PATH = 'C:\Espressif\tools'
+. "$env:IDF_PATH\export.ps1"
+idf.py build
 ```
 
 See [SETUP.md](SETUP.md) for full environment details, toolchain paths, and troubleshooting.

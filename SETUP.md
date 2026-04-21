@@ -12,7 +12,7 @@ This document collects environment, installation, monitoring, and troubleshootin
 Run these in PowerShell to confirm all dependencies are ready:
 ```powershell
 # Test 1: ESP-IDF (both 'idf' and 'idf.py' work after profile setup)
-idf --version             # Should print "ESP-IDF v6.1-dev..."
+idf --version             # Should print "ESP-IDF v6.0..."
 
 # Test 2: cmake and ninja (required for idf build)
 cmake --version           # Should print "cmake version 3.30.2"
@@ -25,7 +25,7 @@ riscv32-esp-elf-addr2line --version    # Should print "GNU addr2line..."
 python -c "import serial; print(f'pyserial {serial.__version__}')"
 
 # Test 5: IDF_PATH
-$env:IDF_PATH             # Should print "C:\esp\esp-idf"
+$env:IDF_PATH             # Should print "C:\esp\v6.0\esp-idf"
 ```
 
 If all tests pass, you're ready to build. Start with `idf build` or `idf.py build`.
@@ -43,35 +43,36 @@ If all tests pass, you're ready to build. Start with `idf build` or `idf.py buil
 - Optional port override for any command: `-p <PORT>` or `--port <PORT>`
 
 ## Required software
-- ESP‑IDF: **v6.1** (tested)
+- ESP‑IDF: **v6.0** (stable target)
 - Python 3.11 (use ESP‑IDF Python virtual env)
 - VS Code + ESP‑IDF Extension (recommended)
 - pyserial (for `watch_serial.py`): `python -m pip install pyserial`
 - RISC‑V toolchain (installed by IDF tools; ensure `riscv32-esp-elf-*` are on PATH for addr2line)
 
 ## Recommended paths (Windows examples)
-- IDF: `C:\esp\esp-idf`
-- IDF tools/env: `C:\Users\<User>\.espressif\python_env\idf6.1_py3.11_env\Scripts\python.exe`
-- IDF tools path: `IDF_TOOLS_PATH = C:\Users\<User>\.espressif`
+- IDF: `C:\esp\v6.0\esp-idf`
+- IDF tools/env: `C:\Espressif\tools\python_env\idf6.0_py3.11_env\Scripts\python.exe`
+- IDF tools path: `IDF_TOOLS_PATH = C:\Espressif\tools`
 
 ## Set up environment (PowerShell)
 
 ### For this workstation (recommended quick setup)
 
 1. **Install pyserial** (one-time):
-   ```powershell
-   $pythonEnv = "$env:USERPROFILE\.espressif\python_env\idf6.1_py3.11_env\Scripts\python.exe"
-   & $pythonEnv -m pip install pyserial
-   ```
+  ```powershell
+  $pythonEnv = 'C:\Espressif\tools\python_env\idf6.0_py3.11_env\Scripts\python.exe'
+  & $pythonEnv -m pip install pyserial
+  ```
 
 2. **Temporary session** (current PowerShell window only):
-   ```powershell
-   $env:IDF_PATH = 'C:\esp\esp-idf'
-   $env:PATH = "$env:USERPROFILE\.espressif\tools\riscv32-esp-elf\esp-15.2.0_20251204\riscv32-esp-elf\bin;$env:PATH"
-   
-   # Create convenient alias
-   function idf { & $env:USERPROFILE\.espressif\python_env\idf6.1_py3.11_env\Scripts\python.exe C:\esp\esp-idf\tools\idf.py @args }
-   ```
+  ```powershell
+  $env:IDF_PATH = 'C:\esp\v6.0\esp-idf'
+  $env:IDF_TOOLS_PATH = 'C:\Espressif\tools'
+  . "$env:IDF_PATH\export.ps1"
+
+  # Create convenient alias
+  function idf { & "$env:IDF_PYTHON_ENV_PATH\Scripts\python.exe" "$env:IDF_PATH\tools\idf.py" @args }
+  ```
   Then: `idf build` / `idf flash` / `idf monitor`
 
 3. **Permanent setup** (add to PowerShell profile):
@@ -80,23 +81,16 @@ If all tests pass, you're ready to build. Start with `idf build` or `idf.py buil
    ```powershell
    # ESP-IDF environment configuration
 
-   # IDF base path
-   $env:IDF_PATH = 'C:\esp\esp-idf'
+  # IDF base path
+  $env:IDF_PATH = 'C:\esp\v6.0\esp-idf'
+  $env:IDF_TOOLS_PATH = 'C:\Espressif\tools'
 
-   # Prefer Python from the ESP-IDF virtual environment
-   $idfPythonDir = "$env:USERPROFILE\.espressif\python_env\idf6.1_py3.11_env\Scripts"
-   $env:PATH = "$idfPythonDir;$env:PATH"
-   $env:IDF_PYTHON_ENV_PATH = "$env:USERPROFILE\.espressif\python_env\idf6.1_py3.11_env"
+  # Load the ESP-IDF 6.0 environment into the current shell
+  . "$env:IDF_PATH\export.ps1"
 
-   # Add RISC-V toolchain, cmake and ninja to PATH
-   $riscvBin = "$env:USERPROFILE\.espressif\tools\riscv32-esp-elf\esp-15.2.0_20251204\riscv32-esp-elf\bin"
-   $cmakeBin = "$env:USERPROFILE\.espressif\tools\cmake\3.30.2\bin"
-   $ninjaBin = "$env:USERPROFILE\.espressif\tools\ninja\1.12.1"
-   $env:PATH = "$riscvBin;$cmakeBin;$ninjaBin;$env:PATH"
-
-   # Convenience wrappers — both 'idf' and 'idf.py' are supported
-   function idf    { & "$idfPythonDir\python.exe" "C:\esp\esp-idf\tools\idf.py" @args }
-   function idf.py { & "$idfPythonDir\python.exe" "C:\esp\esp-idf\tools\idf.py" @args }
+  # Convenience wrappers — both 'idf' and 'idf.py' are supported
+  function idf    { & "$env:IDF_PYTHON_ENV_PATH\Scripts\python.exe" "$env:IDF_PATH\tools\idf.py" @args }
+  function idf.py { & "$env:IDF_PYTHON_ENV_PATH\Scripts\python.exe" "$env:IDF_PATH\tools\idf.py" @args }
    ```
    Then reload: `. $PROFILE` (dot-source, or restart PowerShell)
 
@@ -161,8 +155,10 @@ If `Get-Command idf` returns nothing, run `. $PROFILE` (dot-source) and try agai
 - Dependency: `pyserial`
 - Example:
   ```powershell
-  $env:IDF_PATH='C:\esp\esp-idf'
-  C:\Users\<User>\.espressif\python_env\idf6.1_py3.11_env\Scripts\python.exe scripts/watch_serial.py --inactivity 10
+  $env:IDF_PATH='C:\esp\v6.0\esp-idf'
+  $env:IDF_TOOLS_PATH='C:\Espressif\tools'
+  . "$env:IDF_PATH\export.ps1"
+  & "$env:IDF_PYTHON_ENV_PATH\Scripts\python.exe" scripts/watch_serial.py --inactivity 10
   ```
 - What it does:
   - Reconnects after USB re‑enumeration (useful when the device is reset)
@@ -205,7 +201,7 @@ If `Get-Command idf` returns nothing, run `. $PROFILE` (dot-source) and try agai
 
 ## Workspace / editor hints
 - VS Code (workspace) may include `idf.pythonBinPath`; ensure it points to the IDF Python env used by your IDF install.
-- `sdkconfig` / `sdkconfig.defaults` indicate IDF init/version (`CONFIG_IDF_INIT_VERSION:"6.1.0"`).
+- `sdkconfig` indicates IDF init/version (`CONFIG_IDF_INIT_VERSION:"6.0.0"`).
 
 ## Testing CRC functionality
 
@@ -242,7 +238,7 @@ python -m esptool --chip esp32c3 --port <PORT> --baud 460800 write-flash 0x10000
 Use `idf monitor` for complete boot capture, or `scripts/watch_serial.py --inactivity 10` for long-duration timestamped logging.
 
 ## Troubleshooting checklist
-1. `idf.py --version` shows ESP‑IDF v6.1 (or your configured version).
+1. `idf.py --version` shows ESP‑IDF v6.0 (or your configured version).
 2. `python -c "import serial"` succeeds (pyserial installed).
 3. `riscv32-esp-elf-addr2line --version` available in PATH (for addr2line decoding).
 4. Serial watcher can open the port and writes `build/bootlog.txt`.
