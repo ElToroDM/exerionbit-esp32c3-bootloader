@@ -5,21 +5,21 @@ Scope: normal boot, update protocol, recovery command console, and failure-case 
 ## Environment
 
 - Date: 2026-03-10
- - Last validated: 2026-03-11 (flashed and monitored using `idf.py` + `idf_monitor`)
+- Last validated: 2026-03-11 (flashed and monitored using `idf.py` + `idf_monitor`)
 - Release context: main snapshot validated on 2026-03-11
 - Board: Waveshare ESP32-C3 Zero
-- Connection: USB CDC, COM4
+- Connection: USB CDC on the validated host serial port
 - Baud: 115200
 - ESP-IDF: v6.1 (workspace toolchain)
-- Host Python: `C:\Users\Admin\.espressif\python_env\idf6.1_py3.11_env\Scripts\python.exe`
+- Host Python: ESP-IDF Python 3.11 environment
 - esptool: v5.2.dev4 (from build output)
 
 ## Commands used
 
 - Build: `idf.py build`
-- Flash: `idf.py -p COM4 flash`
-- Monitor/capture: `idf.py -p COM4 monitor` and `python scripts/watch_serial.py --inactivity 10`
-- Negative update tests: `python scripts/send_update_negative.py --port COM4 --case <case_name>`
+- Flash: `idf.py -p <PORT> flash`
+- Monitor/capture: `idf.py -p <PORT> monitor` and `python scripts/watch_serial.py --port <PORT> --inactivity 10`
+- Negative update tests: `python scripts/send_update_negative.py --port <PORT> --case <case_name>`
 
 ## Normal boot
 
@@ -96,11 +96,11 @@ Scope: normal boot, update protocol, recovery command console, and failure-case 
 
 - Evidence validated: `docs/evidence/v0.2`
 - Validation commands run:
-  - `python scripts/validate_evidence_contract.py docs/evidence/v0.2` → FINAL: PASS (2026-03-11)
+  - `python scripts/validate_evidence_contract.py --release v0.2` → FINAL: PASS (2026-03-11)
   - `python scripts/validate_bootlog.py --profile normal --log docs/evidence/v0.2/logs/normal_boot.log` → FINAL: PASS
   - `python scripts/validate_bootlog.py --profile recovery --allow-recovery-handoff --log docs/evidence/v0.2/logs/recovery_commands.log` → FINAL: PASS
 
-All artifacts and logs referenced above were captured during the live flash/monitor session on 2026-03-11 and are present under `docs/evidence/v0.2/`.
+The referenced logs were captured during the live flash/monitor session on 2026-03-11 and are maintained under `docs/evidence/v0.2/` as part of the release evidence set.
 
 ## Validator outputs
 

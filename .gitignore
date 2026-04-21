@@ -64,5 +64,6 @@ poetry.lock
 ## Logs
 *.log
 *.trace
+!docs/evidence/**/*.log
 
 # Keep source files (example) but ignore build products under 'build/'.
