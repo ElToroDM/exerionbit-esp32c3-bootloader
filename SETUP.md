@@ -123,7 +123,7 @@ If `Get-Command idf` returns nothing, run `. $PROFILE` (dot-source) and try agai
 
 1. Run ESP‑IDF install/setup per Espressif docs (or use VS Code extension installer).
 2. Source the ESP‑IDF environment:
-   - Short (temporary): `$env:IDF_PATH = 'C:\esp\esp-idf'`
+  - Short (temporary): `$env:IDF_PATH = 'C:\esp\v6.0\esp-idf'`
    - Permanent (PowerShell profile): add the `export.ps1` invocation from ESP‑IDF or set `IDF_PATH`.
 
 ## Common commands
