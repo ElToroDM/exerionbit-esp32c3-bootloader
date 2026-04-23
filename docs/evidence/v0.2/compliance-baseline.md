@@ -49,7 +49,7 @@ Support in this repository is limited to:
 - reproducibility issues in documented setup and validation paths
 - correctness issues in published baseline behavior
 
-Separate project scopes can define explicit response windows and acceptance criteria.
+Separate agreements can define explicit response windows and acceptance criteria.
 
 ## Known limits
 

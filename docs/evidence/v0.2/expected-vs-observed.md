@@ -7,10 +7,11 @@ Scope: normal boot, update protocol, recovery command console, and failure-case 
 - Date: 2026-03-10
 - Last validated: 2026-03-11 (flashed and monitored using `idf.py` + `idf_monitor`)
 - Release context: main snapshot validated on 2026-03-11
+- Repository build instructions target: ESP-IDF v6.0
 - Board: Waveshare ESP32-C3 Zero
 - Connection: USB CDC on the validated host serial port
 - Baud: 115200
-- ESP-IDF: v6.1 (workspace toolchain)
+- Capture toolchain for this run: ESP-IDF v6.1
 - Host Python: ESP-IDF Python 3.11 environment
 - esptool: v5.2.dev4 (from build output)
 
@@ -84,13 +85,15 @@ Scope: normal boot, update protocol, recovery command console, and failure-case 
 ## Size and media references
 
 - Size snapshot: `docs/evidence/v0.2/size_report.txt`
-- Media path placeholder: `docs/media/v0.2/README.md`
+- Normal boot video: `docs/media/v0.2/demo_normal_boot.mp4`
+- Media inventory: `docs/media/v0.2/README.md`
 
 ## Notes
 
 - Negative test runner: `scripts/send_update_negative.py`
 - Cases: `corrupt_chunk`, `oob_offset`, `invalid_final_crc`, `partial_transfer`
-- Recovery idle liveness in current baseline is LED-only (violet gentle blink), not periodic serial heartbeat tokens.
+- Recovery idle liveness in this implementation is LED-only (violet gentle blink), not periodic serial heartbeat tokens.
+- Repository build instructions target ESP-IDF v6.0. This evidence set was captured on 2026-03-11.
 
 ## Validation summary
 

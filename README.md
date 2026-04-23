@@ -9,11 +9,11 @@ Minimal ESP-IDF bootloader for the Waveshare ESP32-C3 Zero board.
 Boot flow aligned with BRS-B principles (RISC-V ecosystem, ratified 2025): minimal, standardized handoff, no heavy UEFI/ACPI stack.
 Scope note: this repository demonstrates baseline alignment, not full production hardening or full standards conformance.
 
-This repository shows a minimal ESP32-C3 bootloader baseline on real hardware, with deterministic boot-path behavior, validation evidence, and explicit scope limits.
+This repository shows a minimal ESP32-C3 bootloader implementation on real hardware, with deterministic boot-path behavior, validation evidence, and explicit scope limits.
 
 ## What this repository proves
 
-- Deterministic ESP32-C3 second-stage boot behavior on real hardware baseline
+- Deterministic ESP32-C3 second-stage boot behavior on real hardware
 - Explicit boot decision states with stable serial tokens and LED mapping
 - Reproducible normal path and selector-driven mode decisions suitable for audit-style review
 
@@ -39,9 +39,18 @@ This repository shows a minimal ESP32-C3 bootloader baseline on real hardware, w
 
 ## Contact
 
-- Open an issue for scoped bootloader adaptation work
+- Open an issue for ESP32-C3 bootloader bring-up work
 - Email: `exerionbit.diego@gmail.com`
+- Web: `https://www.exerionbit.com`
 - See `BOOT_SEQUENCE.md` and `VALIDATION_PROFILE.md` for the canonical contract
+
+## Evidence and Media
+
+- Canonical evidence pack: `docs/evidence/v0.2/expected-vs-observed.md`
+- Normal boot demo video: `docs/media/v0.2/demo_normal_boot.mp4`
+- Recovery/update serial evidence: `docs/evidence/v0.2/logs/recovery_commands.log` and `docs/evidence/v0.2/logs/recovery_update.log`
+- Build instructions target ESP-IDF 6.0.
+- The current v0.2 evidence set was captured on 2026-03-11.
 
 ## Need / Scope / Timeline
 

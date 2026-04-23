@@ -1,11 +1,11 @@
 # Expected vs Observed - v0.1
 
-Scope: historical baseline capture for normal boot, handoff confirmation, boot-context echo, and runtime heartbeat.
+Scope: v0.1 reference capture for normal boot, handoff confirmation, boot-context echo, and runtime heartbeat.
 
 ## Environment
 
 - Date: 2026-03-08
-- Release context: historical baseline capture archived as v0.1
+- Release context: v0.1 reference capture
 - Board: Waveshare ESP32-C3 Zero
 - Connection: USB CDC on the validated host serial port
 - Baud: 115200
@@ -42,7 +42,7 @@ Scope: historical baseline capture for normal boot, handoff confirmation, boot-c
 - Expected: `APP_EVT:FAULT_HOOK:DISABLED`
 - Observed: `APP_EVT:FAULT_HOOK:DISABLED`
 - Status: PASS
-- Rationale: the default public baseline keeps the test fault hook disabled
+- Rationale: the default release build keeps the test fault hook disabled
 
 ## Runtime heartbeat
 
@@ -54,6 +54,6 @@ Scope: historical baseline capture for normal boot, handoff confirmation, boot-c
 
 ## Notes
 
-- This release is retained as a historical baseline and predates the broader v0.2 evidence matrix.
+- This v0.1 record predates the broader v0.2 evidence set.
 - `waveshare_esp32c3_zero_bootloader.bin` at capture time was recorded as a 1048576-byte partition image with CRC-32 `0xA7C1DB88`.
 - The bootloader binary size recorded for this run was `0x4ca0`, leaving approximately 40% free space in the bootloader partition.

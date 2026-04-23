@@ -29,7 +29,7 @@
   for this proof asset.
 - This repository does **not** include production fault-injection hardening.
 - This repository does **not** include production key provisioning.
-- Advanced hardening and key lifecycle architecture belong to separate project scopes.
+- Advanced hardening and key lifecycle architecture are handled separately.
 
 ## Component override mechanism
 
@@ -39,7 +39,7 @@
 
 ## OTA and update protocol
 
-- UART update receive/write protocol is implemented as a minimal deterministic baseline in update mode.
+- UART update receive/write protocol is implemented as a minimal deterministic update path.
 - Transport is intentionally simple: ASCII frame header (`[LEN:OFFSET:CRC16]`) + binary payload.
 - Current implementation is host-driven and single-session only (no resume).
 - The partition table (`partitions.csv`) includes only NVS and factory app partitions (no OTA slot scheme).
@@ -48,7 +48,7 @@
 
 - Full app payload CRC verification is implemented with descriptor-based metadata (`image_size` + `crc32` at partition tail).
 - Chunk transfer uses CRC16 per frame for transport corruption detection.
-- This remains an integrity baseline only; authenticity and anti-rollback are out of scope.
+- This remains an integrity check only; authenticity and anti-rollback are out of scope.
 
 ## Power-loss and partial-transfer behavior
 
@@ -65,7 +65,7 @@
 - Per-chunk timeout is 120 seconds to tolerate reconnect races; this increases worst-case failure detection latency.
 - Operator must intentionally select UPDATE mode via single-button selector (GPIO9).
 - Failure-case validation requires physical access because UPDATE mode entry is hardware-driven.
-- Recovery idle liveness indication is LED-based in the current baseline (violet gentle blink),
+- Recovery idle liveness indication is LED-based in the current implementation (violet gentle blink),
   not periodic serial heartbeat tokens.
 
 ## Board-specific notes

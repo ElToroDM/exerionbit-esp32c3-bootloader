@@ -32,7 +32,7 @@ For potentially sensitive findings:
 
 - published setup and validation paths are the primary focus for repository issue handling
 - documented behavior regressions are the primary focus for repository issue handling
-- additional delivery expectations belong in a separate project scope, not in this repository
+- additional delivery expectations are handled separately from this repository
 
 ## Support Window
 
@@ -40,4 +40,4 @@ Support in this repository is limited to:
 - reproducibility issues in documented setup/validation paths
 - correctness issues in published baseline behavior
 
-Separate project scopes can define explicit response windows and acceptance criteria.
+Separate agreements can define explicit response windows and acceptance criteria.

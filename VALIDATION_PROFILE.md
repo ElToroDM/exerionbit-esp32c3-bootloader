@@ -7,7 +7,6 @@ Purpose: define the canonical validation execution profile and PASS/FAIL criteri
 - Serial port auto-detection: enabled by default
 - Manual port override: supported
 - Default full validation timeout: 10 seconds
-- Missing visual media (GIF/video): non-blocking warning for marketing packaging
 - Protocol validation PASS/FAIL: based on deterministic token checks
 
 ## 2. Canonical token families
@@ -86,15 +85,10 @@ When live serial logs are unavailable (hardware window closed), the release reco
 - mark the run status as `PARTIAL`
 - schedule a follow-up capture to add `logs/*.log`
 
-Optional but recommended for public packaging:
-
-- `docs/evidence/<release>/screenshots/*`
-- `docs/media/<release>/*`
-
 ## 5. Hardware availability note
 
 This repository includes hardware-dependent checks.
 When hardware is unavailable, you may run parser-level validation on existing logs and defer live serial execution to the next hardware window.
 
 Recovery liveness note:
-- Current baseline signals recovery idle liveness via LED behavior, not periodic serial heartbeat tokens.
+- This implementation signals recovery idle liveness via LED behavior, not periodic serial heartbeat tokens.

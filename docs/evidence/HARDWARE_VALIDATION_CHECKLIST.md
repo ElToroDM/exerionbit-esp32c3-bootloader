@@ -7,11 +7,16 @@ Purpose: execute deterministic hardware-in-the-loop validation for published ESP
 - Date: 2026-03-10
 - Validation mode: hardware capture
 - Release context: main snapshot captured on 2026-03-11
+- Repository build target: ESP-IDF v6.0
 - Board serial or identifier: N/A in this run
 - USB mode and COM port: USB CDC, COM4 (configured)
-- ESP-IDF version: v6.1
+- Capture toolchain for this run: ESP-IDF v6.1
 - Host Python version: 3.12.9 (validation runner)
 - esptool version: v5.2.dev4 (from build output)
+
+Run note:
+- This checklist records the hardware run captured on 2026-03-11.
+- Repository build instructions target ESP-IDF v6.0.
 
 ## 2. Pre-Flight
 
