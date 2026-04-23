@@ -40,9 +40,9 @@ Not included:
 
 ## Evidence and Media
 
-- Canonical evidence pack: `docs/evidence/v0.2/expected-vs-observed.md`
-- Normal boot demo video: `docs/media/v0.2/demo_normal_boot.mp4`
-- Recovery/update serial evidence: `docs/evidence/v0.2/logs/recovery_commands.log` and `docs/evidence/v0.2/logs/recovery_update.log`
+- Canonical evidence pack: [docs/evidence/v0.2/expected-vs-observed.md](docs/evidence/v0.2/expected-vs-observed.md)
+- Normal boot demo video: [docs/media/v0.2/demo_normal_boot.mp4](docs/media/v0.2/demo_normal_boot.mp4)
+- Recovery/update serial evidence: [recovery_commands.log](docs/evidence/v0.2/logs/recovery_commands.log) and [recovery_update.log](docs/evidence/v0.2/logs/recovery_update.log)
 - Build instructions target ESP-IDF 6.0.
 - The current v0.2 evidence set was captured on 2026-03-11.
 
@@ -186,7 +186,7 @@ Validation defaults:
 - **Custom bootloader**: `bootloader_components/main/main.c` contains our `call_start_cpu0()`
 - **Component override**: Our `main` component replaces ESP-IDF's default bootloader main
 - **USB handling**: Scripts handle ESP32-C3 USB reenumeration during reset
-- **Build verification**: Bootloader size snapshot tracked in `docs/evidence/v0.2/size_report.txt`
+- **Build verification**: Bootloader size snapshot tracked in [docs/evidence/v0.2/size_report.txt](docs/evidence/v0.2/size_report.txt)
 
 ## Configuration Notes
 - Secure Boot: **not included** (development build)
