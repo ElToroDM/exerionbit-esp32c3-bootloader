@@ -11,14 +11,14 @@ Scope note: this repository demonstrates baseline alignment, not full production
 
 This repository shows a minimal ESP32-C3 bootloader implementation on real hardware, with deterministic boot-path behavior, validation evidence, and explicit scope limits.
 
-## What this repository proves
+## Scope
 
+What this repository demonstrates:
 - Deterministic ESP32-C3 second-stage boot behavior on real hardware
 - Explicit boot decision states with stable serial tokens and LED mapping
 - Reproducible normal path and selector-driven mode decisions suitable for audit-style review
 
-## What this repository does not prove
-
+Not included:
 - Advanced production hardening internals
 - Full key management architecture
 - Client-specific anti-tamper implementation details
@@ -38,13 +38,6 @@ This repository shows a minimal ESP32-C3 bootloader implementation on real hardw
 - The published boot sequence includes deliberate visual/reconnect delays to make LED states and late boot tokens easy to observe; production-oriented builds would usually shorten or remove them
 - Repository documentation covers baseline behavior, not full production hardening
 
-## Contact
-
-- Open an issue for ESP32-C3 bootloader bring-up work
-- Email: `exerionbit.diego@gmail.com`
-- Web: `https://www.exerionbit.com`
-- See `BOOT_SEQUENCE.md` and `VALIDATION_PROFILE.md` for the canonical contract
-
 ## Evidence and Media
 
 - Canonical evidence pack: `docs/evidence/v0.2/expected-vs-observed.md`
@@ -55,15 +48,15 @@ This repository shows a minimal ESP32-C3 bootloader implementation on real hardw
 
 ## Need / Scope / Timeline
 
-| Need | Typical timeline | Includes | Evidence artifact | Contact |
-|---|---|---|---|---|
-| UART/serial update baseline | 1-2 days | Deterministic transport + CRC path + logs | `docs/evidence/<release>/logs/recovery_update.log` | exerionbit.diego@gmail.com |
-| Factory/recovery baseline | 3-5 days | GPIO trigger + selector tokens + LED diagnostics | `docs/evidence/<release>/expected-vs-observed.md` | exerionbit.diego@gmail.com |
-| Lightweight secure baseline | 5-10 days | Integrity/signature baseline mapping + BRS-B principles note | `docs/evidence/<release>/compliance-baseline.md` | exerionbit.diego@gmail.com |
+| Need | Typical timeline | Includes | Evidence artifact |
+|---|---|---|---|
+| UART/serial update baseline | 1-2 days | Deterministic transport + CRC path + logs | `docs/evidence/<release>/logs/recovery_update.log` |
+| Factory/recovery baseline | 3-5 days | GPIO trigger + selector tokens + LED diagnostics | `docs/evidence/<release>/expected-vs-observed.md` |
+| Lightweight secure baseline | 5-10 days | Integrity/signature baseline mapping + BRS-B principles note | `docs/evidence/<release>/compliance-baseline.md` |
 
-ESP32-C6 work may require separate validation and board-specific assumptions.
+For all engagements: `exerionbit.diego@gmail.com`
 
-## Standards alignment (baseline)
+## Standards alignment
 
 - BRS-B principles alignment: minimal boot flow, explicit handoff contract, no heavy UEFI/ACPI dependency.
 - Scope note: this repository is not a full BRS/BRS-B conformance claim.
@@ -166,12 +159,10 @@ This repository provides a minimal bootloader demo and instructions for building
 
 **Boot sequence specification**: See [BOOT_SEQUENCE.md](BOOT_SEQUENCE.md) for complete LED mapping, timing budget, and serial token definitions.
 
-Locked validation defaults:
+Validation defaults:
 - Serial port auto-detection enabled by default
 - Total validation timeout: `10s`
 - Manual port override remains available
-
-Evidence policy:
 - Protocol PASS/FAIL is based on deterministic boot/app token checks.
 
 ## Project Structure
@@ -198,8 +189,8 @@ Evidence policy:
 - **Build verification**: Bootloader size snapshot tracked in `docs/evidence/v0.2/size_report.txt`
 
 ## Configuration Notes
-- Secure Boot: **DISABLED** (development mode)
-- Flash Encryption: **DISABLED** (development mode)
+- Secure Boot: **not included** (development build)
+- Flash Encryption: **not included** (development build)
 - Bootloader Log Level: **ERROR** (reduce noise)
 - Partition Table Offset: **0x8000** (default)
 - Compiler Optimization: **Size (-Os)**
@@ -210,3 +201,10 @@ Evidence policy:
 - Image signature verification
 - JTAG debugging (add ESP-PROG probe)
 - USB DFU mode
+
+## Contact
+
+- Open an issue for ESP32-C3 bootloader bring-up work
+- Email: `exerionbit.diego@gmail.com`
+- Web: `https://www.exerionbit.com`
+- See `BOOT_SEQUENCE.md` and `VALIDATION_PROFILE.md` for the canonical contract
