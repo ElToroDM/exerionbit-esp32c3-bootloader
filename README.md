@@ -35,6 +35,7 @@ This repository shows a minimal ESP32-C3 bootloader implementation on real hardw
 
 - Live validation requires physical ESP32-C3 hardware access
 - Native USB re-enumeration can hide very early boot lines without watcher tooling
+- The published boot sequence includes deliberate visual/reconnect delays to make LED states and late boot tokens easy to observe; production-oriented builds would usually shorten or remove them
 - Repository documentation covers baseline behavior, not full production hardening
 
 ## Contact

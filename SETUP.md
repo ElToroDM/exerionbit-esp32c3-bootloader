@@ -185,6 +185,8 @@ If `Get-Command idf` returns nothing, run `. $PROFILE` (dot-source) and try agai
 
 ## Advanced notes (boot timing and debug strategies)
 - Boot delay: bootloader flushes buffered logs after ~1.0s to allow USB re‑enumeration; this is intentional to ensure logs appear after USB reconnects in demo mode.
+- Visual delay: the normal boot path also includes deliberate per-phase LED hold times so the state sequence is readable during live observation and video capture.
+- Production note: for a production-oriented boot path, reevaluate both the USB reconnect delay and the visual hold times; they are useful for this demo repository but are not meant as universal boot-time targets.
 - To capture boot earlier:
   - Use external UART on GPIO20/21
   - Use JTAG (ESP‑PROG + OpenOCD)

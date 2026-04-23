@@ -63,6 +63,7 @@
 - Maximum chunk size is fixed to 1024 bytes in bootloader.
 - Header and payload offsets must be 4-byte aligned.
 - Per-chunk timeout is 120 seconds to tolerate reconnect races; this increases worst-case failure detection latency.
+- The normal boot path includes deliberate visual pacing and a USB reconnect delay to improve observability on native USB CDC; these delays are convenient for this repository demo but are not intended as production boot-time targets.
 - Operator must intentionally select UPDATE mode via single-button selector (GPIO9).
 - Failure-case validation requires physical access because UPDATE mode entry is hardware-driven.
 - Recovery idle liveness indication is LED-based in the current implementation (violet gentle blink),

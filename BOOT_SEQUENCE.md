@@ -12,6 +12,10 @@ Implementation note:
 - `USB_RECONNECT_MS = 1000` (fixed reconnect window)
 - State durations derived from `TOTAL_VISUAL_MS` by percentage (no per-state hardcoded literals outside mapping table)
 
+Timing intent note:
+- These delays are intentional for this repository's observable demo behavior and USB CDC capture reliability.
+- A production-oriented variant would usually shorten or remove them once the required diagnostics and handoff confidence are available through other channels.
+
 Normal path percentages:
 - `INIT`: 10% (400ms)
 - `HW_READY`: 10% (400ms)

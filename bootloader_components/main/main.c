@@ -19,6 +19,9 @@
 #include "update_mode.h"
 #include "ws2812.h"
 
+// Demo-oriented timing to keep LED states and late boot tokens visible on camera
+// and over native USB CDC. Production builds would typically shorten or remove
+// these delays once observability requirements are met through other means.
 #define TOTAL_VISUAL_MS            4000U
 #define USB_RECONNECT_MS           1000U
 
