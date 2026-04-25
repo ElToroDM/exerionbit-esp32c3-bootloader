@@ -11,6 +11,8 @@ Scope note: this repository demonstrates baseline alignment, not full production
 
 This repository shows a minimal ESP32-C3 bootloader implementation on real hardware, with deterministic boot-path behavior, validation evidence, and explicit scope limits.
 
+![Waveshare ESP32-C3 Zero custom bootloader hardware view](docs/media/v0.2/waveshare-esp32-c3-zero-custom-bootloader-normal-boot-thumbnail.webp)
+
 ## Scope
 
 What this repository demonstrates:
@@ -41,7 +43,11 @@ Not included:
 ## Evidence and Media
 
 - Canonical evidence pack: [docs/evidence/v0.2/expected-vs-observed.md](docs/evidence/v0.2/expected-vs-observed.md)
-- Normal boot demo video: [docs/media/v0.2/demo_normal_boot.mp4](docs/media/v0.2/demo_normal_boot.mp4)
+- Normal boot demo:
+
+    [![Waveshare ESP32-C3 Zero custom bootloader normal boot GIF](docs/media/v0.2/waveshare-esp32-c3-zero-custom-bootloader-normal-boot.gif)](docs/media/v0.2/waveshare-esp32-c3-zero-custom-bootloader-normal-boot.mp4)
+
+    Direct video file: [docs/media/v0.2/waveshare-esp32-c3-zero-custom-bootloader-normal-boot.mp4](docs/media/v0.2/waveshare-esp32-c3-zero-custom-bootloader-normal-boot.mp4)
 - Recovery/update serial evidence: [recovery_commands.log](docs/evidence/v0.2/logs/recovery_commands.log) and [recovery_update.log](docs/evidence/v0.2/logs/recovery_update.log)
 - Build instructions target ESP-IDF 6.0.
 - The current v0.2 evidence set was captured on 2026-03-11.

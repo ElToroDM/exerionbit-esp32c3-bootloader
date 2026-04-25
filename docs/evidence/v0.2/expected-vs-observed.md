@@ -85,7 +85,7 @@ Scope: normal boot, update protocol, recovery command console, and failure-case 
 ## Size and media references
 
 - Size snapshot: `docs/evidence/v0.2/size_report.txt`
-- Normal boot video: `docs/media/v0.2/demo_normal_boot.mp4`
+- Normal boot video: `docs/media/v0.2/waveshare-esp32-c3-zero-custom-bootloader-normal-boot.mp4`
 - Media inventory: `docs/media/v0.2/README.md`
 
 ## Notes
