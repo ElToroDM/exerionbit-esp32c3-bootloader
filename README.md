@@ -18,7 +18,7 @@ This repository shows a minimal ESP32-C3 bootloader implementation on real hardw
 What this repository demonstrates:
 - Deterministic ESP32-C3 second-stage boot behavior on real hardware
 - Explicit boot decision states with stable serial tokens and LED mapping
-- Reproducible normal path and selector-driven mode decisions suitable for audit-style review
+- Reproducible normal path and selector-driven mode decisions that are easy to review against the published token sequence and evidence logs
 
 Not included:
 - Advanced production hardening internals
@@ -170,6 +170,14 @@ Validation defaults:
 - Total validation timeout: `10s`
 - Manual port override remains available
 - Protocol PASS/FAIL is based on deterministic boot/app token checks.
+
+## Boot Decision Overview
+
+The diagram below summarizes the normal, update, and recovery branches with the key decision points and observable serial-token milestones.
+
+![ESP32-C3 boot decision overview](docs/media/v0.2/waveshare-esp32-c3-zero-custom-bootloader-boot-flow.webp)
+
+For canonical timing, LED mapping, and token definitions, see [BOOT_SEQUENCE.md](BOOT_SEQUENCE.md).
 
 ## Project Structure
 ```
