@@ -9,7 +9,29 @@ Minimal ESP-IDF bootloader for the Waveshare ESP32-C3 Zero board.
 Boot flow aligned with BRS-B principles (RISC-V ecosystem, ratified 2025): minimal, standardized handoff, no heavy UEFI/ACPI stack.
 Scope note: this repository demonstrates baseline alignment, not full production hardening or full standards conformance.
 
-This repository shows a minimal ESP32-C3 bootloader implementation on real hardware, with deterministic boot-path behavior, validation evidence, and explicit scope limits.
+This repository proves that a small ESP32-C3 team can get a readable, auditable boot path on real hardware without relying on opaque vendor boot behavior. It shows deterministic boot-path behavior, recovery and update baseline paths, validation evidence, and explicit scope limits.
+
+## Who this helps
+
+- Teams moving from ESP32-C3 devkits to custom boards
+- Consultancies that need a clean boot baseline they can hand off
+- OEMs that need owned code, explicit limits, and evidence-backed behavior
+
+## Commercial entry point
+
+This repository is the main public proof for scoped ESP32-C3 bring-up and boot-path adaptation work.
+
+Use it to start one bounded scope:
+- First-Board Bring-Up: explicit boot flow, diagnostics, and board adaptation
+- Factory and Field Recovery: recovery and update baseline paths with deterministic behavior
+- Verified Boot Gate: small verification gate, expected-versus-observed package, and compliance-ready baseline evidence
+
+ESP32-C3 leads because it has the strongest public proof today. Other ESP32 RISC-V chips, including ESP32-C6, can be handled as separate scoped adaptation work when board assumptions and validation targets are explicit.
+
+Handled separately:
+- advanced production hardening internals
+- full key management architecture
+- client-specific anti-tamper implementation details
 
 ![Waveshare ESP32-C3 Zero custom bootloader hardware view](docs/media/v0.2/waveshare-esp32-c3-zero-custom-bootloader-normal-boot-thumbnail.webp)
 
@@ -18,12 +40,35 @@ This repository shows a minimal ESP32-C3 bootloader implementation on real hardw
 What this repository demonstrates:
 - Deterministic ESP32-C3 second-stage boot behavior on real hardware
 - Explicit boot decision states with stable serial tokens and LED mapping
-- Reproducible normal path and selector-driven mode decisions that are easy to review against the published token sequence and evidence logs
+- Recovery and update baseline behavior that is easy to review against the published token sequence and evidence logs
+- A public proof surface for scoped ESP32-C3 bring-up and boot-path adaptation
 
 Not included:
 - Advanced production hardening internals
 - Full key management architecture
 - Client-specific anti-tamper implementation details
+
+## Need / Scope / Timeline
+
+| Need | Typical timeline | Includes | Evidence artifact |
+|---|---|---|---|
+| First-Board Bring-Up | 1-3 days | Board bring-up, boot flow adjustment, deterministic logs | `docs/evidence/<release>/expected-vs-observed.md` |
+| Factory and Field Recovery | 3-5 days | GPIO trigger or UART path, CRC gate, behavior summary | `docs/evidence/<release>/logs/recovery_update.log` |
+| Verified Boot Gate | 1-2 days | Expected-versus-observed package, known limits, handoff summary, compliance-ready baseline note | `docs/evidence/<release>/expected-vs-observed.md` |
+
+## Start a scoped project
+
+ExerionBit works through fixed-scope, evidence-backed deliverables.
+
+To request a scoping pass, email `exerionbit.diego@gmail.com` with:
+- target SoC or board
+- current boot blocker
+- desired outcome: `First-Board Bring-Up`, `Factory and Field Recovery`, or `Verified Boot Gate`
+- expected timeline
+
+Main public proof: this repository for ESP32-C3.
+Supporting reference for architecture review: the portable RISC-V repository.
+Web entry point: `https://www.exerionbit.com`
 
 ## Quick demo
 
@@ -38,7 +83,8 @@ Not included:
 - Live validation requires physical ESP32-C3 hardware access
 - Native USB re-enumeration can hide very early boot lines without watcher tooling
 - The published boot sequence includes deliberate visual/reconnect delays to make LED states and late boot tokens easy to observe; production-oriented builds would usually shorten or remove them
-- Repository documentation covers baseline behavior, not full production hardening
+- Repository documentation covers a minimal recovery/update baseline, not full production hardening
+- Commercial scope can extend to other ESP32 RISC-V chips, but this repository only proves ESP32-C3 today
 
 ## Evidence and Media
 
@@ -51,16 +97,6 @@ Not included:
 - Recovery/update serial evidence: [recovery_commands.log](docs/evidence/v0.2/logs/recovery_commands.log) and [recovery_update.log](docs/evidence/v0.2/logs/recovery_update.log)
 - Build instructions target ESP-IDF 6.0.
 - The current v0.2 evidence set was captured on 2026-03-11.
-
-## Need / Scope / Timeline
-
-| Need | Typical timeline | Includes | Evidence artifact |
-|---|---|---|---|
-| UART/serial update baseline | 1-2 days | Deterministic transport + CRC path + logs | `docs/evidence/<release>/logs/recovery_update.log` |
-| Factory/recovery baseline | 3-5 days | GPIO trigger + selector tokens + LED diagnostics | `docs/evidence/<release>/expected-vs-observed.md` |
-| Lightweight secure baseline | 5-10 days | Integrity/signature baseline mapping + BRS-B principles note | `docs/evidence/<release>/compliance-baseline.md` |
-
-For all engagements: `exerionbit.diego@gmail.com`
 
 ## Standards alignment
 
@@ -179,23 +215,6 @@ The diagram below summarizes the normal, update, and recovery branches with the 
 
 For canonical timing, LED mapping, and token definitions, see [BOOT_SEQUENCE.md](BOOT_SEQUENCE.md).
 
-## Project Structure
-```
-./
-├── CMakeLists.txt              # Top-level project (includes bootloader_components, app_test)
-├── sdkconfig.defaults          # Minimal bootloader config
-├── partitions.csv              # Partition table (NVS + factory app)
-├── app_test/
-│   ├── CMakeLists.txt
-│   └── main.c                  # Validation/integration app
-├── bootloader_components/
-│   └── main/                   # ← Custom bootloader (replaces ESP-IDF default)
-│       ├── CMakeLists.txt
-│       └── main.c              # Custom call_start_cpu0() implementation
-└── scripts/
-    └── watch_serial.py         # Serial monitoring with USB reconnection handling
-```
-
 ## Key Implementation Details
 - **Custom bootloader**: `bootloader_components/main/main.c` contains our `call_start_cpu0()`
 - **Component override**: Our `main` component replaces ESP-IDF's default bootloader main
@@ -218,7 +237,8 @@ For canonical timing, LED mapping, and token definitions, see [BOOT_SEQUENCE.md]
 
 ## Contact
 
-- Open an issue for ESP32-C3 bootloader bring-up work
+- Request a scoped project with: target board, current boot blocker, desired outcome, and timeline
 - Email: `exerionbit.diego@gmail.com`
 - Web: `https://www.exerionbit.com`
+- Use this repository as the main public proof for `First-Board Bring-Up`, `Factory and Field Recovery`, and `Verified Boot Gate` on ESP32-C3 today; ask separately about ESP32-C6 or other ESP32 RISC-V adaptation scope
 - See `BOOT_SEQUENCE.md` and `VALIDATION_PROFILE.md` for the canonical contract
