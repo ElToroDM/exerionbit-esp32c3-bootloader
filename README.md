@@ -211,7 +211,7 @@ Validation defaults:
 
 The diagram below summarizes the normal, update, and recovery branches with the key decision points and observable serial-token milestones.
 
-![ESP32-C3 boot decision overview](docs/media/v0.2/waveshare-esp32-c3-zero-custom-bootloader-boot-flow.webp)
+![ESP32-C3 boot decision overview](docs/media/waveshare-esp32-c3-zero-custom-bootloader-boot-flow.webp)
 
 For canonical timing, LED mapping, and token definitions, see [BOOT_SEQUENCE.md](BOOT_SEQUENCE.md).
 
