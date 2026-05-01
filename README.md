@@ -4,12 +4,12 @@
 [![Target: ESP32-C3](https://img.shields.io/badge/Target-ESP32--C3-success?style=flat-square&logo=espressif)](https://www.espressif.com/en/products/socs/esp32-c3)&nbsp;&nbsp;
 [![Custom Paid Ports](https://img.shields.io/badge/Custom-Paid%20Ports-brightgreen?style=flat-square)](https://github.com/ElToroDM/exerionbit-esp32c3-bootloader/issues)&nbsp;&nbsp;
 
-Minimal ESP-IDF bootloader for the Waveshare ESP32-C3 Zero board.
+Minimal ESP-IDF bootloader for the Waveshare ESP32-C3 Zero board, built to prove readable bring-up, bounded recovery, and explicit boot-path control on real hardware.
 
 Boot flow aligned with BRS-B principles (RISC-V ecosystem, ratified 2025): minimal, standardized handoff, no heavy UEFI/ACPI stack.
 Scope note: this repository demonstrates baseline alignment, not full production hardening or full standards conformance.
 
-This repository proves that a small ESP32-C3 team can get a readable, auditable boot path on real hardware without relying on opaque vendor boot behavior. It shows deterministic boot-path behavior, recovery and update baseline paths, validation evidence, and explicit scope limits.
+This repository proves that a small ESP32-C3 team can get a custom board booting with a readable, auditable path on real hardware without relying on opaque vendor boot behavior. It shows deterministic bring-up behavior, recovery and update baseline paths, validation evidence, and explicit scope limits.
 
 ## Who this helps
 
@@ -19,14 +19,19 @@ This repository proves that a small ESP32-C3 team can get a readable, auditable 
 
 ## Commercial entry point
 
-This repository is the main public proof for scoped ESP32-C3 bring-up and boot-path adaptation work.
+This repository is the main public reference for ESP32-C3 bring-up, recovery, and boot-path adaptation work.
+
+Best starting point:
+- `First-Board Bring-Up` when the board is blocked or boot behavior is still unstable
+- `Factory and Field Recovery` when bad images, failed first boots, or update fallout need a bounded fallback path
+- `Verified Boot Gate` when update, audit, or compliance pressure is already explicit
 
 Use it to start one bounded scope:
 - First-Board Bring-Up: explicit boot flow, diagnostics, and board adaptation
 - Factory and Field Recovery: recovery and update baseline paths with deterministic behavior
 - Verified Boot Gate: small verification gate, expected-versus-observed package, and compliance-ready baseline evidence
 
-ESP32-C3 leads because it has the strongest public proof today. Other ESP32 RISC-V chips, including ESP32-C6, can be handled as separate scoped adaptation work when board assumptions and validation targets are explicit.
+ESP32-C3 leads because it has the strongest public proof today. Other ESP32 RISC-V chips, including ESP32-C6, can be handled separately when board assumptions and validation targets are explicit.
 
 Handled separately:
 - advanced production hardening internals
@@ -41,7 +46,7 @@ What this repository demonstrates:
 - Deterministic ESP32-C3 second-stage boot behavior on real hardware
 - Explicit boot decision states with stable serial tokens and LED mapping
 - Recovery and update baseline behavior that is easy to review against the published token sequence and evidence logs
-- A public proof surface for scoped ESP32-C3 bring-up and boot-path adaptation
+- A public reference implementation for ESP32-C3 bring-up and boot-path adaptation
 
 Not included:
 - Advanced production hardening internals
@@ -54,20 +59,22 @@ Not included:
 |---|---|---|---|
 | First-Board Bring-Up | 1-3 days | Board bring-up, boot flow adjustment, deterministic logs | `docs/evidence/<release>/expected-vs-observed.md` |
 | Factory and Field Recovery | 3-5 days | GPIO trigger or UART path, CRC gate, behavior summary | `docs/evidence/<release>/logs/recovery_update.log` |
-| Verified Boot Gate | 1-2 days | Expected-versus-observed package, known limits, handoff summary, compliance-ready baseline note | `docs/evidence/<release>/expected-vs-observed.md` |
+| Verified Boot Gate | 1-2 days | Selective verification gate, expected-versus-observed package, known limits, handoff summary, compliance-ready baseline note | `docs/evidence/<release>/expected-vs-observed.md` |
 
 ## Start a scoped project
 
 ExerionBit works through fixed-scope, evidence-backed deliverables.
 
+Most projects start from a current boot blocker or a recovery/update risk, then add verification work only when the extra gate is already justified.
+
 To request a scoping pass, email `exerionbit.diego@gmail.com` with:
 - target SoC or board
 - current boot blocker
-- desired outcome: `First-Board Bring-Up`, `Factory and Field Recovery`, or `Verified Boot Gate`
+- desired outcome: `First-Board Bring-Up`, `Factory and Field Recovery`, `Verified Boot Gate`, or `Architecture de-risking review`
 - expected timeline
 
 Main public proof: this repository for ESP32-C3.
-Supporting reference for architecture review: the portable RISC-V repository.
+RISC-V reference for architecture review: the portable RISC-V repository.
 Web entry point: `https://www.exerionbit.com`
 
 ## Quick demo
@@ -240,5 +247,5 @@ For canonical timing, LED mapping, and token definitions, see [BOOT_SEQUENCE.md]
 - Request a scoped project with: target board, current boot blocker, desired outcome, and timeline
 - Email: `exerionbit.diego@gmail.com`
 - Web: `https://www.exerionbit.com`
-- Use this repository as the main public proof for `First-Board Bring-Up`, `Factory and Field Recovery`, and `Verified Boot Gate` on ESP32-C3 today; ask separately about ESP32-C6 or other ESP32 RISC-V adaptation scope
+- Use this repository as the main public reference for `First-Board Bring-Up` and `Factory and Field Recovery` on ESP32-C3 today; add `Verified Boot Gate` when verification pressure is already explicit, and ask separately about ESP32-C6 or other ESP32 RISC-V adaptation work
 - See `BOOT_SEQUENCE.md` and `VALIDATION_PROFILE.md` for the canonical contract
