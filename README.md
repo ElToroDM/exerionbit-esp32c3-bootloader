@@ -6,6 +6,8 @@
 
 Minimal ESP-IDF bootloader for the Waveshare ESP32-C3 Zero board, built to prove readable bring-up, bounded recovery, and explicit boot-path control on real hardware.
 
+When a custom ESP32-C3 board will not boot reliably, blocked bring-up and recovery gaps can delay delivery and raise field risk. This repository is the public hardware proof for a deterministic, debuggable, and recoverable boot path.
+
 Boot flow aligned with BRS-B principles (RISC-V ecosystem, ratified 2025): minimal, standardized handoff, no heavy UEFI/ACPI stack.
 Scope note: this repository demonstrates baseline alignment, not full production hardening or full standards conformance.
 
@@ -66,6 +68,8 @@ Not included:
 ExerionBit works through fixed-scope, evidence-backed deliverables.
 
 Most projects start from a current boot blocker or a recovery/update risk, then add verification work only when the extra gate is already justified.
+
+Send four inputs. Get a short, scoped reply with the best-fit path for your board.
 
 To request a scoping pass, email `exerionbit.diego@gmail.com` with:
 - target SoC or board
